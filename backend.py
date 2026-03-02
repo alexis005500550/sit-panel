@@ -2,7 +2,7 @@
 Backend Flask - API REST pour le panel web Tinder Bot
 """
 
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import json
 import time
@@ -36,6 +36,10 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tinderbot-secret-key-change-me-in-prod')
 CORS(app, supports_credentials=True, origins=['*'])
+
+@app.route('/')
+def home():
+    return render_template("index.html")
 
 active_tokens = {}
 
