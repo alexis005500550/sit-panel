@@ -1,4 +1,3 @@
-
 flask
+flask-cors
 gunicorn
-from flask_cors import CORS
