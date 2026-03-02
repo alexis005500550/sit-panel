@@ -2,9 +2,15 @@
 Backend Flask - API REST pour le panel web Tinder Bot
 Basé sur le bot Telegram existant - réutilise TinderAPI et FruitzAPI
 """
-
+from flask import render_template
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
+app = Flask(__name__)
+CORS(app)
+
+@app.route("/")
+def home():
+    return render_template("index.html")
 import json
 import time
 import random
@@ -1251,6 +1257,8 @@ def login():
             active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role']}
             return jsonify({'success': True, 'token': token, 'username': u['username'], 'role': u['role']})
     return jsonify({'success': False, 'error': 'Identifiants incorrects'}), 401
+
+
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
