@@ -1,0 +1,40 @@
+{
+  "cbd8ef53-3e39-4139-9315-1379d9c7f376": [
+    {
+      "id": "8c2c945d",
+      "name": "1",
+      "type": "forcematch",
+      "interval_minutes": 30,
+      "account_ids": [
+        "69a04981787b6a08b8f49f59",
+        "69a07affba61b2f7ca6ad7e2",
+        "69a0e467baf785657ce75727",
+        "69a0ec910ae04dff77796571",
+        "69a1078a4a92db51fa44ff43",
+        "69a1e35aa5949a46e51b3517",
+        "69a1e82741aac4e7b3abaed1"
+      ],
+      "username": "",
+      "social_network": "Instagram",
+      "swipe_count": 9,
+      "like_pct": 100,
+      "parallel": true,
+      "created_at": 1772234275.960059
+    },
+    {
+      "id": "7189bddd",
+      "name": "T\u00e2che chatting",
+      "type": "chatting",
+      "interval_minutes": 30,
+      "account_ids": [
+        "69a04981787b6a08b8f49f59"
+      ],
+      "username": "sarahtatir",
+      "social_network": "lntsa",
+      "swipe_count": 50,
+      "like_pct": 80,
+      "parallel": false,
+      "created_at": 1772234923.421112
+    }
+  ]
+}
