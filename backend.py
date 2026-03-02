@@ -5,12 +5,7 @@ Basé sur le bot Telegram existant - réutilise TinderAPI et FruitzAPI
 from flask import render_template
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
-app = Flask(__name__)
-CORS(app)
 
-@app.route("/")
-def home():
-    return render_template("index.html")
 import json
 import time
 import random
@@ -47,6 +42,9 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tinderbot-secret-key-change-me-in-prod')
 CORS(app, supports_credentials=True, origins=['*'])
+@app.route('/')
+def home():
+    return send_from_directory('static', 'index.html')
 
 # Stockage des tokens actifs en mémoire: {token: {user_id, username, role}}
 active_tokens = {}
