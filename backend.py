@@ -1,10 +1,9 @@
 """
 Backend Flask - API REST pour le panel web Tinder Bot
-Basé sur le bot Telegram existant - réutilise TinderAPI et FruitzAPI
 """
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
 
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 import json
 import time
 import random
@@ -14,9 +13,6 @@ import os
 import hashlib
 import secrets
 
-# ============================================================
-# IMPORTS DU BOT (copie des classes depuis ton bot.py)
-# ============================================================
 try:
     from curl_cffi import requests as curl_requests
     CURL_CFFI_AVAILABLE = True
@@ -28,7 +24,6 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# IA
 try:
     from groq import Groq
     GROQ_AVAILABLE = True
@@ -41,11 +36,7 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tinderbot-secret-key-change-me-in-prod')
 CORS(app, supports_credentials=True, origins=['*'])
-@app.route('/')
-def home():
-    return render_template("index.html")
 
-# Stockage des tokens actifs en mémoire: {token: {user_id, username, role}}
 active_tokens = {}
 
 def generate_token():
@@ -80,35 +71,18 @@ def current_user_data():
     token = get_token_from_request()
     return active_tokens.get(token, {})
 
-# ============================================================
-# HELPERS (identiques au bot)
-# ============================================================
+def current_user_id():
+    return current_user_data().get('user_id', 'default')
 
-def generate_device_id_from_user_id(user_id):
-    import hashlib
-    hash_obj = hashlib.md5(f"fruitz_{user_id}".encode())
-    return hash_obj.hexdigest().upper()
+# ============================================================
+# HELPERS
+# ============================================================
 
 def generate_session_id():
     return str(uuid.uuid4())
 
 def generate_request_id():
     return str(uuid.uuid4())
-
-def generate_sentry_trace():
-    trace_id = uuid.uuid4().hex
-    span_id = uuid.uuid4().hex[:16]
-    return f"{trace_id}-{span_id}"
-
-def generate_baggage(trace_id):
-    return (
-        "sentry-environment=production,"
-        "sentry-public_key=5fafb8140a654df29aa396de5b7261d4,"
-        f"sentry-trace_id={trace_id},"
-        "sentry-sample_rate=0.05,"
-        "sentry-transaction=Route%20Change,"
-        "sentry-sampled=false"
-    )
 
 def get_current_ip(proxies=None):
     try:
@@ -121,14 +95,36 @@ def get_current_ip(proxies=None):
 # FICHIERS DE DONNÉES
 # ============================================================
 
-ACCOUNTS_FILE    = "tinder_accounts.json"
-PROXIES_FILE     = "user_proxies.json"
-HISTORY_FILE     = "message_history.json"
-STATS_FILE       = "tinder_stats.json"
+ACCOUNTS_FILE      = "tinder_accounts.json"
+PROXIES_FILE       = "user_proxies.json"
+HISTORY_FILE       = "message_history.json"
+STATS_FILE         = "tinder_stats.json"
 STATS_HISTORY_FILE = "tinder_stats_history.json"
-USERS_FILE       = "panel_users.json"
-TAGS_FILE        = "panel_tags.json"
-AUTOMATION_FILE  = "automation_config.json"
+USERS_FILE         = "panel_users.json"
+TAGS_FILE          = "panel_tags.json"
+AUTOMATION_FILE    = "automation_config.json"
+SETTINGS_FILE      = "panel_settings.json"
+
+# --- SETTINGS ---
+
+def load_settings(user_id="default"):
+    try:
+        with open(SETTINGS_FILE, 'r') as f:
+            return json.load(f).get(str(user_id), {})
+    except:
+        return {}
+
+def save_settings(settings, user_id="default"):
+    try:
+        with open(SETTINGS_FILE, 'r') as f:
+            all_data = json.load(f)
+    except:
+        all_data = {}
+    all_data[str(user_id)] = settings
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(all_data, f, indent=2)
+
+# --- TAGS ---
 
 def load_tags(user_id="default"):
     try:
@@ -147,8 +143,9 @@ def save_tags(tags, user_id="default"):
     with open(TAGS_FILE, 'w', encoding='utf-8') as f:
         json.dump(all_data, f, indent=2, ensure_ascii=False)
 
+# --- STATS HISTORY ---
+
 def load_stats_history(user_id="default"):
-    """Retourne la liste des entrées historiques: [{date, swipes, messages, matches}]"""
     try:
         with open(STATS_HISTORY_FILE, 'r') as f:
             return json.load(f).get(str(user_id), [])
@@ -166,21 +163,29 @@ def save_stats_history(history, user_id="default"):
         json.dump(all_data, f, indent=2)
 
 def record_daily_stats(user_id="default"):
-    """Ajoute une entrée dans l'historique pour aujourd'hui."""
     import datetime
     today = datetime.date.today().isoformat()
     stats = load_stats(user_id)
     history = load_stats_history(user_id)
-    # Mettre à jour ou ajouter l'entrée du jour
     existing = next((e for e in history if e['date'] == today), None)
     if existing:
         existing['swipes']   = stats.get('swipes', 0)
         existing['messages'] = stats.get('messages', 0)
         existing['matches']  = stats.get('matches', 0)
+        existing['replies']  = stats.get('replies', 0)
+        existing['cta_sent'] = stats.get('cta_sent', 0)
     else:
-        history.append({'date': today, 'swipes': stats.get('swipes', 0),
-                        'messages': stats.get('messages', 0), 'matches': stats.get('matches', 0)})
+        history.append({
+            'date': today,
+            'swipes':   stats.get('swipes', 0),
+            'messages': stats.get('messages', 0),
+            'matches':  stats.get('matches', 0),
+            'replies':  stats.get('replies', 0),
+            'cta_sent': stats.get('cta_sent', 0),
+        })
     save_stats_history(history, user_id)
+
+# --- AUTOMATION ---
 
 def load_automation(user_id="default"):
     try:
@@ -199,9 +204,7 @@ def save_automation(tasks, user_id="default"):
     with open(AUTOMATION_FILE, 'w') as f:
         json.dump(all_data, f, indent=2)
 
-# ============================================================
-# AUTH HELPERS
-# ============================================================
+# --- AUTH HELPERS ---
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -218,7 +221,6 @@ def save_users(users):
         json.dump(users, f, indent=2)
 
 def ensure_admin_exists():
-    """Crée un admin par défaut si aucun utilisateur n'existe."""
     users = load_users()
     if not users:
         admin_id = str(uuid.uuid4())
@@ -231,8 +233,20 @@ def ensure_admin_exists():
         }
         save_users(users)
         print("👤 Admin créé — username: admin / password: admin123")
-        print("⚠️  Change le mot de passe admin immédiatement !")
 
+def load_stats(user_id="default"):
+    try:
+        with open(STATS_FILE, 'r') as f:
+            d = json.load(f).get(str(user_id), {})
+            return {
+                'swipes':   d.get('swipes', 0),
+                'messages': d.get('messages', 0),
+                'matches':  d.get('matches', 0),
+                'replies':  d.get('replies', 0),
+                'cta_sent': d.get('cta_sent', 0),
+            }
+    except:
+        return {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0}
 
 def save_stats(stats, user_id="default"):
     import datetime
@@ -241,7 +255,6 @@ def save_stats(stats, user_id="default"):
             all_data = json.load(f)
     except:
         all_data = {}
-    # Préserver last_reset pour éviter le reset au redémarrage
     existing = all_data.get(str(user_id), {})
     all_data[str(user_id)] = {
         **stats,
@@ -318,7 +331,7 @@ def has_message_sent(user_id, account_user_id, match_id):
     return f"{account_user_id}_{match_id}" in history
 
 # ============================================================
-# TINDER API (extrait du bot)
+# TINDER API
 # ============================================================
 
 sessions = {}
@@ -396,8 +409,6 @@ def generate_content_hash():
     hash_bytes = hashlib.sha256(random_str.encode()).digest()
     return base64.b64encode(hash_bytes).decode('utf-8').rstrip('=')
 
-# --- TINDER API CALLS ---
-
 def tinder_check_token(account, proxies=None):
     headers = build_headers(account)
     try:
@@ -421,7 +432,6 @@ def tinder_check_token(account, proxies=None):
 def tinder_init_session(account, proxies=None):
     h = build_headers(account, include_content_type=True)
     base = "https://api.gotinder.com"
-
     make_request('POST', f"{base}/v2/buckets", h, proxies=proxies, json_data={"experiments": [], "device_id": account.get('device_id', '')})
     time.sleep(random.uniform(0.3, 0.6))
     make_request('POST', f"{base}/v1/loc/init", build_headers(account, True), proxies=proxies, json_data={"deviceTime": int(time.time()*1000), "eventId": str(uuid.uuid4()).upper()})
@@ -544,316 +554,303 @@ def tinder_update_bio(account, bio, proxies=None):
         return {'success': False, 'error': str(e)}
 
 # ============================================================
-# IA (Groq)
+# IA
 # ============================================================
 
-def generate_ai_reply(conversation_history, match_name, match_bio, username, social_network):
-    if not GROQ_AVAILABLE and not GROQ_API_KEY:
-        return None
-
-    our_messages   = [m for m in conversation_history if m['sender'] == 'NOUS']
-    their_messages = [m for m in conversation_history if m['sender'] != 'NOUS']
-    formatted = "\n".join([f"{m['sender']}: {m['text']}" for m in conversation_history[-10:]])
-
-    # ═══════════════════════════════════════════════════════════
-    # PHASE 1 : DÉTECTION DE L'ÉTAT DE LA CONVERSATION
-    # ═══════════════════════════════════════════════════════════
-
-    # A. Vérifier si redirection déjà effectuée
-    already_redirected = False
-    if username:
-        redirect_markers = [username.lower(), 'insta', 'instagram', social_network.lower() if social_network else '']
-        for msg in our_messages:
-            msg_lower = msg['text'].lower()
-            if any(marker in msg_lower for marker in redirect_markers if marker):
-                already_redirected = True
-                break
-
-    # B. Détecter si il propose un réseau social
-    he_proposes_social = False
-    he_proposes_insta  = False
-    he_proposes_snap   = False
-
-    if their_messages:
-        last_msg = their_messages[-1]['text'].lower()
-        if 'insta' in last_msg or 'instagram' in last_msg:
-            he_proposes_insta = True
-            he_proposes_social = True
-        elif 'snap' in last_msg or 'snapchat' in last_msg:
-            he_proposes_snap = True
-            he_proposes_social = True
-        elif any(w in last_msg for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'appel']):
-            he_proposes_social = True
-
-    # C. Détecter demande de localisation
-    location_keywords = ["d'où", "d ou", 'où', 'ville', 'habite', 'vis', 'viens', 'secteur', 'coin', 'region']
-    he_asked_location = any(any(kw in msg['text'].lower() for kw in location_keywords) for msg in their_messages)
-    we_asked_location = any(any(kw in msg['text'].lower() for kw in location_keywords) for msg in our_messages)
-
-    # D. Extraire sa ville si mentionnée
-    his_city = None
-    cities = ['paris', 'marseille', 'lyon', 'toulouse', 'nice', 'nantes',
-              'strasbourg', 'montpellier', 'bordeaux', 'lille', 'rennes',
-              'aix', 'cannes', 'antibes', 'toulon']
-    for msg in their_messages:
-        for city in cities:
-            if city in msg['text'].lower():
-                his_city = city
-                break
-        if his_city:
-            break
-
-    # E. Décision redirection automatique
-    should_redirect = False
-    total_exchanges = min(len(our_messages), len(their_messages))
-    if not already_redirected and username and social_network and total_exchanges >= 4:
-        probability = 0.95 if total_exchanges >= 7 else 0.85
-        should_redirect = random.random() < probability
-
-    # ═══════════════════════════════════════════════════════════
-    # PHASE 2 : CONSTRUCTION DU PROMPT SELON LE CONTEXTE
-    # ═══════════════════════════════════════════════════════════
-
-    # CAS 1 : Il propose un réseau social (PRIORITÉ ABSOLUE)
-    if he_proposes_social and not already_redirected:
-        if he_proposes_insta:
-            prompt = f"""Tu es une fille de 20 ans sur Tinder. {match_name} propose Instagram.
-
-Historique:
-{formatted}
-
-Mission : Accepte avec joie et donne ton Instagram ({username}).
-
-Exemples (choisis-en un) :
-- "Ouiii carrément ! C'est {username} 🥰"
-- "Yes ! C'est {username} ☺️"
-- "Grave ! Cherche {username} 😊"
-
-Règles : 10-15 mots max, commence par majuscule, 1 emoji max, ton enjoué, pas de guillemets."""
-
-        elif he_proposes_snap:
-            prompt = f"""Tu es une fille de 20 ans sur Tinder. {match_name} propose Snapchat.
-
-Historique:
-{formatted}
-
-Mission : Refuse Snap poliment et donne Instagram ({username}).
-
-Exemples (choisis-en un) :
-- "Ah désolée j'ai pas snap 😅 par contre {username} sur insta !"
-- "Non j'utilise que insta moi, c'est {username} 🙈"
-
-Règles : 15-20 mots max, commence par majuscule, 1 emoji max, refuse Snap, donne Instagram, pas de guillemets."""
-
-        else:
-            prompt = f"""Tu es une fille de 20 ans sur Tinder. {match_name} propose un autre réseau.
-
-Historique:
-{formatted}
-
-Mission : Redirige vers Instagram ({username}).
-
-Exemple : "J'ai que insta moi, c'est {username} 🙈"
-
-Règles : 15 mots max, commence par majuscule, 1 emoji max, pas de guillemets."""
-
-    # CAS 2 : Redirection automatique (après 4+ échanges)
-    elif should_redirect:
-        prompt = f"""Tu es une fille de 20 ans sur Tinder avec {match_name}.
-
-Historique:
-{formatted}
-
-Mission : Continue la conversation ET mentionne ton {social_network}.
-
-Structure :
-1. Réponds à son dernier message (10 mots max)
-2. Ajoute UNE excuse pour aller sur {social_network}
-
-Excuses possibles (choisis-en UNE) :
-- "C'est relou d'écrire ici, je peux pas faire de vocaux ptdr. {username} sur {social_network} ?"
-- "Je réponds jamais ici mdr, je suis plus sur {social_network}. C'est {username} 😅"
-- "Cette appli bug chez moi... {username} sur {social_network} plutôt ? 🙈"
-
-Règles : 25-35 mots total, commence par majuscule, ton naturel, 1-2 emojis max, pas de guillemets."""
-
-    # CAS 3 : Après redirection (négociation)
-    elif already_redirected:
-        last_msg = their_messages[-1]['text'].lower() if their_messages else ""
-
-        if any(w in last_msg for w in ['ok', 'ouais', 'oui', 'dac', 'go', 'cool', 'parfait', "c'est fait", 'fait']):
-            prompt = f"""Tu es une fille de 20 ans. {match_name} accepte d'aller sur Instagram.
-
-Historique:
-{formatted}
-
-Mission : Confirme avec joie. NE répète PAS ton username.
-
-Exemples (choisis-en un) :
-- "Trop bien ! J'attends ton message 🥰"
-- "Cool ! À tout de suite là-bas 😊"
-- "Parfait mdr ! Je check souvent 🙈"
-
-Règles : 8-12 mots max, commence par majuscule, 1 emoji max, NE répète PAS le username, pas de guillemets."""
-
-        elif any(w in last_msg for w in ['non', 'pas', 'reste', 'ici', 'tinder', 'flemme']):
-            prompt = f"""Tu es une fille de 20 ans. {match_name} refuse d'aller sur Instagram.
-
-Historique:
-{formatted}
-
-Mission : Insiste avec UNE excuse convaincante et rappelle {username}.
-
-Excuses (choisis-en UNE) :
-- "Mais j'ai jamais les notifs ici... {username} sur insta je réponds direct 🙈"
-- "Tinder bug tout le temps chez moi... {username} sur insta c'est mieux ☺️"
-- "De toute façon je supprime l'appli bientôt... {username} sur insta avant 😅"
-
-Règles : 15-20 mots max, commence par majuscule, 1 emoji max, insiste, rappelle username, pas de guillemets."""
-
-        elif any(w in last_msg for w in ['insta', 'snap', "c'est quoi", 'c quoi', 'ton insta']):
-            prompt = f"""Tu es une fille de 20 ans. {match_name} redemande ton contact.
-
-Historique:
-{formatted}
-
-Mission : Rappelle ton Instagram avec excuse.
-
-Exemples (choisis-en un) :
-- "{username.capitalize()} ptdr, je te l'ai dit ! J'ai pas les notifs ici 😅"
-- "C'est {username} mdr, cette appli marche mal chez moi 🙈"
-
-Règles : 15 mots max, commence par majuscule, 1 emoji max, rappelle username, pas de guillemets."""
-
-        elif 'snap' in last_msg:
-            prompt = f"""Tu es une fille de 20 ans. {match_name} insiste pour Snap.
-
-Historique:
-{formatted}
-
-Mission : Refuse Snap, insiste pour Instagram {username}.
-
-Exemple : "J'ai vraiment pas snap désolée 😅 par contre {username} sur insta !"
-
-Règles : 15 mots max, commence par majuscule, 1 emoji max, refuse Snap, donne Instagram, pas de guillemets."""
-
-        else:
-            prompt = f"""Tu es une fille de 20 ans. Tu as donné ton Instagram ({username}) mais {match_name} continue sur Tinder.
-
-Historique:
-{formatted}
-
-Mission : Réponds TRÈS BRIÈVEMENT (3-5 mots) puis ramène vers Instagram.
-
-Exemples (choisis-en un) :
-- "Lol ouais... mais sérieux {username} sur insta, j'ai pas les notifs ici 😅"
-- "Ah cool ! {username} sur insta plutôt, cette appli bug chez moi 🙈"
-- "Mdr ! Bon {username} sur insta, je réponds plus vite là-bas ☺️"
-
-Règles : 15-20 mots total, commence par majuscule, 1 emoji max, réponds COURT puis ramène Insta, pas de guillemets."""
-
-    # CAS 4 : Gestion de la localisation
-    elif he_asked_location and not we_asked_location:
-        if his_city:
-            prompt = f"""Tu es une fille de 20 ans. {match_name} habite à {his_city}.
-
-Historique:
-{formatted}
-
-Mission : Dis que tu habites là-bas aussi.
-
-Exemples (choisis-en un) :
-- "Oui moi aussi ! 😊"
-- "Ah cool pareil mdr ! 🥰"
-- "Genre on est voisins ptdr ! 🙈"
-
-Règles : 8-12 mots max, commence par majuscule, 1 emoji max, confirme même ville, pas de guillemets."""
-
-        else:
-            prompt = f"""Tu es une fille de 20 ans. {match_name} demande où tu habites.
-
-Historique:
-{formatted}
-
-Mission : Retourne la question AVANT de répondre.
-
-Exemples (choisis-en un) :
-- "Et toi t'es d'où du coup ? 😊"
-- "Toi t'habites où ? 🙈"
-- "Et toi t'es de quel coin ? ☺️"
-
-Règles : 8-12 mots max, commence par majuscule, 1 emoji max, retourne la question, pas de guillemets."""
-
-    # CAS 5 : Conversation normale
-    else:
-        questions_pool = [
-            "Et toi tu fais quoi de beau ? 🥰",
-            "T'as d'autres passions ? 🙈",
-            "Qu'est-ce que tu aimes faire ? ☺️",
-            "T'as des projets en ce moment ? 😊",
-            "Tu fais quoi pour t'amuser ? 🥰",
-            "T'es plutôt sortie ou tranquille chez toi ? 🙈",
-            "Tu kiff quoi dans la vie ? ☺️",
-            "T'as des hobbies ? 😊",
-            "Tu fais quoi ce week-end ? 🥰"
-        ]
-        selected_questions = random.sample(questions_pool, 3)
-        questions_text = "\n".join([f'- "{q}"' for q in selected_questions])
-
-        prompt = f"""Tu es une fille de 20 ans mignonne sur Tinder avec {match_name}.
-
-Bio de {match_name} : {match_bio if match_bio else "Pas de bio"}
-
-Historique:
-{formatted}
-
-Mission : Réponds naturellement comme une vraie fille de 20 ans.
-
-Ton style :
-- Mignonne, un peu timide
-- Utilise "lol", "mdr", "genre", "franchement"
-- Emojis : 🥰 😊 🙈 ☺️ 😅 💕
-- Pose des questions sur ses passions/activités/vie
-- 10-20 mots max
-
-Questions possibles (choisis UNE parmi celles-ci UNIQUEMENT) :
-{questions_text}
-
-RÈGLES CRITIQUES :
-- Commence TOUJOURS par une MAJUSCULE
-- 1 seul emoji à la fin max
-- NE demande JAMAIS d'où il est (sauf s'il demande en premier)
-- Choisis UNE question parmi celles proposées ci-dessus
-- 10-20 mots max
-- Pas de guillemets
-
-Réponds UNIQUEMENT avec le message final."""
-
-    # ═══════════════════════════════════════════════════════════
-    # PHASE 3 : APPEL GROQ ET NETTOYAGE
-    # ═══════════════════════════════════════════════════════════
+OPENAI_API_KEY = "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"
+OPENAI_MODEL  = "gpt-4.1-mini"
+
+PERSONA = """
+Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
+
+═══ PERSONNALITÉ ═══
+- Détachée mais accessible. L'autre doit faire un minimum d'effort.
+- Taquine, naturelle, spontanée. Jamais froide, jamais trop enthousiaste.
+- Ton chill, décontracté. Ni cordial ni professionnel.
+
+═══ ÉCRITURE OBLIGATOIRE ═══
+- PAS de majuscule en début de phrase. PAS de point final. Style SMS.
+- Mots : mdr, genre, jsp, trop, grave, ptdr, jpp, tfk.
+- Français correct. JAMAIS "quoi est ton" → écrire "c'est quoi ton" ou "t'as".
+- Émojis : max 1 tous les 3-4 messages, à la fin uniquement.
+- Réponses courtes : 6-20 mots en général.
+
+═══ CONVERSATION ═══
+- Lis TOUT l'historique. Réponds de façon COHÉRENTE avec ce qu'il vient de dire.
+- Max 2 questions d'affilée, sinon alterne remarques/affirmations.
+- JAMAIS finir par une réponse fermée. TOUJOURS une question ou relance.
+- "ça va bien" seul = INTERDIT. Toujours [réponse] + question.
+
+═══ RELANCE ═══
+- S'il a DÉJÀ répondu (tranquille, ça va, ouais) → NE PAS redemander "et toi ?". PIVOTE.
+- "écoute" / "tranquille écoute" = il va parler → invite-le à continuer.
+
+═══ CAS SPÉCIAUX ═══
+- Méfiance / "t'es fake" / "tu cherches des abonnés" → DÉSAMORCE avec humour. JAMAIS confirmer. JAMAIS mentionner lntsa dans ce cas.
+- Insulte / message vulgaire → réponds avec humour léger ou ignore, reste chill.
+- Media (gif, image) → ne commente pas le contenu que tu ne vois pas. Relance sur autre chose.
+- Langue anglaise détectée → réponds en anglais avec le même ton décontracté.
+
+═══ LOCALISATION ═══
+- JAMAIS d'adresse, ville, bar ou lieu inventé.
+- Esquive avec humour : "jsuis pas loin", "un peu de mystère", "tu veux mon adresse aussi ?"
+
+═══ LNTSA - Objectif ═══
+- Écris exactement "lntsa" (L-n-t-s-a). PAS "insta", PAS "lnsta". Pseudo SANS @.
+- Snap/WhatsApp/numéro → REFUSE toujours, propose lntsa UNIQUEMENT.
+- Quand il propose de partir ailleurs → lntsa DIRECTEMENT, pas "lntsa ou snap ?".
+"""
+
+def _is_english(text):
+    en_words = ['how are you', 'what are you', 'nice to meet', 'how do you', 'good morning',
+                'good evening', 'good night', 'thank you', 'what\'s up', 'lovely', 'beautiful',
+                'how was your', 'what do you', 'are you', 'do you', 'can you', 'i am', "i'm"]
+    t = text.lower()
+    return any(w in t for w in en_words)
+
+def _force_lntsa(text):
+    for wrong in ['Instagram', 'instagram', 'INSTAGRAM', 'Insta', 'INSTA', 'lnsta', 'LNSTA', 'lsnta', 'LSNTA', 'Lntsa', 'LNTSA']:
+        text = text.replace(wrong, 'lntsa')
+    return text
+
+def _clean_reply(reply):
+    reply = reply.strip().strip('"').strip("'")
+    for prefix in ['réponse:', 'response:', 'message:', 'sarah:', 'moi:']:
+        if reply.lower().startswith(prefix):
+            reply = reply[len(prefix):].strip()
+    reply = _force_lntsa(reply)
+    reply = reply.replace('quoi est ton', "c'est quoi ton").replace('quoi est ta', "c'est quoi ta")
+    return reply
+
+def _call_openai(prompt, max_tokens=150):
     try:
         resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-            json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.9, "max_tokens": 150},
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={"model": OPENAI_MODEL, "messages": [{"role": "user", "content": prompt}],
+                  "temperature": 0.9, "max_tokens": max_tokens},
             timeout=30
         )
         if resp.status_code == 200:
-            return resp.json()['choices'][0]['message']['content'].strip().strip('"').strip("'")
-    except:
-        pass
+            return _clean_reply(resp.json()['choices'][0]['message']['content'])
+        else:
+            print(f"⚠️  OpenAI {resp.status_code}: {resp.text[:150]}")
+    except Exception as e:
+        print(f"⚠️  Exception: {e}")
     return None
+
+def generate_ai_reply(conversation_history, match_name, match_bio, username, social_network):
+    our_messages   = [m for m in conversation_history if m['sender'] == 'NOUS']
+    their_messages = [m for m in conversation_history if m['sender'] != 'NOUS']
+    if not their_messages:
+        return None
+
+    formatted = "\n".join(
+        f"TOI (Sarah): {m['text']}" if m['sender'] == 'NOUS' else f"LUI ({m['sender']}): {m['text']}"
+        for m in conversation_history[-12:]
+    )
+    total_exchanges = min(len(our_messages), len(their_messages))
+
+    already_redirected = False
+    soft_hint_given    = False
+    if username:
+        redirect_markers  = [username.lower(), 'lntsa', 'instagram', social_network.lower() if social_network else '']
+        soft_hint_markers = ['jamais sur tinder', 'jamais ici', "j'me perds", 'notifs',
+                             "pas trop l'habitude", 'parler bcp sur tinder', "pas trop présente",
+                             "j'check pas", "longues discu sur tinder", "longues discu ici"]
+        for msg in our_messages:
+            ml = msg['text'].lower()
+            if any(m in ml for m in redirect_markers if m):
+                already_redirected = True
+                break
+            if any(h in ml for h in soft_hint_markers):
+                soft_hint_given = True
+
+    if already_redirected:
+        return None
+
+    last_msg  = their_messages[-1]['text']
+    lml       = last_msg.lower()
+
+    he_proposes_insta   = 'insta' in lml or 'instagram' in lml
+    he_proposes_snap    = 'snap' in lml or 'snapchat' in lml
+    he_proposes_social  = he_proposes_insta or he_proposes_snap or any(
+        w in lml for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'appel'])
+
+    flirty_words = ['canon', 'magnifique', 'splendide', 'sexy', 'bombe', 'hot', '🔥', '😍', '❤️', 'jolie', 'belle', 'mignonne']
+    is_compliment = any(w in lml for w in flirty_words) or any(
+        p in lml for p in ["t'es belle", 'trop belle', 'trop mignonne', 'vraiment jolie', 'trop jolie', 'super jolie'])
+    is_flirty     = is_compliment
+    is_question  = '?' in last_msg
+    direct_words = ['date', 'sortir', 'voir', 'rencontrer', 'rdv', 'ce soir', 'week-end', 'weekend', 'dispo', 'verre', 'resto']
+    is_direct    = any(w in lml for w in direct_words)
+
+    skeptical_words = ['fake', 'bot', 'vraie', 'réelle', 'arnaque', 'followers', 'follow',
+                       'abonnés', 'abonné', 'promo', 'pub', 'gratter', 'onlyfans', 'of ',
+                       'là pour les abonnées', 'là pour ton insta', 'là pour lntsa']
+    is_skeptical = any(w in lml for w in skeptical_words)
+
+    location_kw = ["d'où", 'où tu', 'ville', 'habite', 'secteur', 'coin', "t'habite",
+                   'quel bar', 'quel parc', 'où ça', 'quel coin', 'dans quel']
+    he_asked_location = any(k in lml for k in location_kw) or ('où' in lml and len(lml) < 40)
+    he_asked_job    = any(k in lml for k in ['fais quoi', 'travail', 'boulot', 'métier', 'études', 'taff']) and is_question
+    he_asked_et_toi = 'et toi' in lml
+    he_asked_cava   = any(p in lml for p in ['ça va', 'ca va', 'comment tu vas', 'tu vas bien'])
+    short_reply     = len(last_msg.split()) <= 4 and any(w in lml for w in ['tranquille', 'ça va', 'ca va', 'ouais', 'bien', 'nickel'])
+    is_confusion    = len(last_msg) < 45 and any(p in lml for p in ['hein', 'comprends pas', 'compris quoi', 'cest quoi', "c'est quoi ça"])
+    is_english      = _is_english(last_msg)
+    is_media = last_msg.startswith('http') and any(ext in last_msg for ext in ['.gif', '.jpg', '.png', '.mp4', 'tenor.com', 'giphy.com'])
+
+    if total_exchanges >= 12:
+        full_p, hint_p = 1.0, 0.0
+    elif total_exchanges >= 10:
+        full_p = 0.85 if soft_hint_given else 0.3
+        hint_p = 0.0  if soft_hint_given else 0.4
+    elif total_exchanges >= 8:
+        full_p = 0.6  if soft_hint_given else 0.15
+        hint_p = 0.0  if soft_hint_given else 0.5
+    elif total_exchanges >= 6:
+        full_p = 0.4  if soft_hint_given else 0.0
+        hint_p = 0.45
+    elif total_exchanges >= 5:
+        full_p, hint_p = 0.0, 0.35
+    else:
+        full_p, hint_p = 0.0, 0.0
+
+    r1, r2 = random.random(), random.random()
+    should_soft_hint = not soft_hint_given and username and r1 < hint_p
+    should_redirect  = username and r2 < full_p and (soft_hint_given or total_exchanges >= 11)
+
+    greeting_words   = ['salut', 'hello', 'hey', 'coucou', 'bonjour', 'cc', 'slt', 'hi', 'yo', 'wesh', 'hola', 'holaa']
+    is_first_message = total_exchanges == 0
+    is_greeting_only = any(lml.startswith(w) or lml == w for w in greeting_words) and len(last_msg.split()) <= 6 and not is_compliment
+
+    p = PERSONA
+
+    if is_skeptical:
+        prompt = f"""{p}
+{match_name} est méfiant ou t'accuse: "{last_msg}"
+Historique:\n{formatted}
+DÉSAMORCE avec humour. Rassure-le sans être défensive. Ne mentionne PAS lntsa ici.
+12-22 mots, ton léger, pas de guillemets."""
+    elif is_media:
+        prompt = f"""{p}
+{match_name} t'a envoyé un média. Tu NE VOIS PAS son contenu.
+Historique:\n{formatted}
+NE COMMENTE PAS le contenu. Réagis de façon neutre et relance.
+8-15 mots, pas de guillemets."""
+    elif is_english:
+        prompt = f"""{p}
+{match_name} wrote in English: "{last_msg}"
+Conversation:\n{formatted}
+Reply IN ENGLISH, same chill tone. Short, casual, end with a question.
+6-18 words, no quotes."""
+    elif short_reply and not he_asked_cava:
+        prompt = f"""{p}
+{match_name} a répondu court: "{last_msg}"
+Historique:\n{formatted}
+NE PAS redemander "et toi ?". PIVOTE vers autre chose.
+6-14 mots, pas de guillemets."""
+    elif he_asked_cava:
+        prompt = f"""{p}
+{match_name} demande comment tu vas: "{last_msg}"
+Historique:\n{formatted}
+[réponse courte] + question. JAMAIS finir par "ça va bien merci" seul.
+6-15 mots, pas de guillemets."""
+    elif is_greeting_only and is_first_message:
+        prompt = f"""{p}
+{match_name}: "{last_msg}" (premier message)
+Réponds chill, courte, pose une question ouverte.
+8-14 mots, pas de guillemets."""
+    elif he_proposes_insta:
+        prompt = f"""{p}
+{match_name} propose Instagram: "{last_msg}"
+Historique:\n{formatted}
+Accepte avec enthousiasme. Donne ton pseudo {username} sans @.
+8-15 mots, écris "lntsa", pas de guillemets."""
+    elif he_proposes_snap:
+        prompt = f"""{p}
+{match_name} propose Snap: "{last_msg}"
+Historique:\n{formatted}
+REFUSE snap. Propose lntsa UNIQUEMENT: "t'as lntsa ? moi c'est {username}".
+12-22 mots, écris "lntsa", pas de guillemets."""
+    elif he_proposes_social:
+        prompt = f"""{p}
+{match_name} propose un autre moyen: "{last_msg}"
+Historique:\n{formatted}
+REFUSE. Propose lntsa UNIQUEMENT. Donne {username} sans @.
+12-22 mots, écris "lntsa", pas de guillemets."""
+    elif is_direct and total_exchanges >= 8:
+        prompt = f"""{p}
+{match_name} propose de se voir: "{last_msg}"
+Historique:\n{formatted}
+Dis OUI. Explique qu'il faut organiser ailleurs. Propose lntsa ({username}).
+22-35 mots, écris "lntsa", pas de guillemets."""
+    elif is_compliment:
+        prompt = f"""{p}
+{match_name} te fait un compliment: "{last_msg}"
+Historique:\n{formatted}
+Réagis puis RELANCE avec une question.
+8-18 mots, pas de guillemets."""
+    elif he_asked_location:
+        prompt = f"""{p}
+{match_name} demande ta localisation: "{last_msg}"
+Historique:\n{formatted}
+ESQUIVE avec humour. JAMAIS de ville/lieu/adresse.
+8-18 mots, pas de guillemets."""
+    elif he_asked_job:
+        prompt = f"""{p}
+{match_name} demande ton job: "{last_msg}"
+Historique:\n{formatted}
+Réponds brièvement (étudiante en comm) et retourne la question.
+10-18 mots, pas de guillemets."""
+    elif he_asked_et_toi:
+        prompt = f"""{p}
+{match_name}: "{last_msg}"
+Historique:\n{formatted}
+RÉPONDS à ce qu'il a dit puis RELANCE.
+10-18 mots, pas de guillemets."""
+    elif is_confusion:
+        prompt = f"""{p}
+{match_name} comprend pas: "{last_msg}"
+Historique:\n{formatted}
+Reformule ou invite-le à continuer. Reste chill.
+8-15 mots, pas de guillemets."""
+    elif should_soft_hint:
+        prompt = f"""{p}
+Conversation avec {match_name}. Planter la graine (sans mentionner lntsa).
+Son message: "{last_msg}"
+Historique:\n{formatted}
+Réagis à son message PUIS ajoute UNE phrase douce avec "par contre", "sinon" ou "au fait".
+Ton DOUX. INTERDIT: lntsa, insta, pseudo.
+15-28 mots, pas de guillemets."""
+    elif should_redirect:
+        prompt = f"""{p}
+Conversation avec {match_name}. La graine a été plantée, propose maintenant lntsa.
+Son message: "{last_msg}"
+Historique:\n{formatted}
+[réagir à son message] + "t'as lntsa ? moi c'est {username}".
+20-30 mots, écris "lntsa", pas de guillemets."""
+    else:
+        prompt = f"""{p}
+Historique:\n{formatted}
+Il dit: "{last_msg}"
+Réponds DÉCONTRACTÉ, NATUREL. Finis TOUJOURS par une question.
+8-18 mots, pas de guillemets."""
+
+    if len(their_messages) == 1:
+        prompt += "\n\n⚠️ PREMIER MESSAGE: finir OBLIGATOIREMENT par une question ouverte."
+
+    return _call_openai(prompt, max_tokens=150)
 
 # ============================================================
 # AUTOMATION SCHEDULER
 # ============================================================
 
-automation_jobs = {}   # task_id -> {status, next_run, log, ...}
-automation_threads = {}  # task_id -> thread
+automation_jobs = {}
+automation_threads = {}
 
 def run_automation_task(task_id, task, user_id):
-    """Tourne en boucle et exécute la tâche selon l'intervalle."""
     import datetime
     automation_jobs[task_id]['status'] = 'running'
     automation_jobs[task_id]['log'] = []
@@ -862,13 +859,12 @@ def run_automation_task(task_id, task, user_id):
         automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}")
         if len(automation_jobs[task_id]['log']) > 500:
             automation_jobs[task_id]['log'] = automation_jobs[task_id]['log'][-500:]
-        print(f"[AUTO:{task_id}] {msg}")
 
     interval_sec = int(task.get('interval_minutes', 30)) * 60
     task_type = task.get('type', 'massdm')
     parallel = task.get('parallel', False)
 
-    log(f"⚡ Tâche démarrée — {task_type} toutes les {task.get('interval_minutes')}min — tous les comptes")
+    log(f"⚡ Tâche démarrée — {task_type} toutes les {task.get('interval_minutes')}min")
 
     while automation_jobs.get(task_id, {}).get('status') == 'running':
         next_run = time.time() + interval_sec
@@ -879,43 +875,28 @@ def run_automation_task(task_id, task, user_id):
 
         try:
             job_id = str(uuid.uuid4())[:8]
-            # Toujours utiliser tous les comptes — account_ids vide = tous
             account_ids = []
 
             if task_type in ('massdm', 'chatting'):
                 username       = task.get('username', '')
                 social_network = task.get('social_network', 'Instagram')
                 mode           = task_type
-
-                # Lancer dans le même thread pour capturer les logs en live
-                # On redirige les logs du job vers les logs automation
-                orig_log = dm_progress.get(job_id)
                 t = threading.Thread(
                     target=run_mass_dm,
                     args=(job_id, account_ids, username, social_network, mode, user_id),
                     daemon=True
                 )
                 t.start()
-                # Suivre les logs en temps réel
                 while t.is_alive():
                     if automation_jobs.get(task_id, {}).get('status') != 'running':
                         break
                     job_logs = dm_progress.get(job_id, {}).get('log', [])
-                    current_count = len(automation_jobs[task_id]['log'])
-                    # Synchroniser les logs du job dans les logs automation
                     already_synced = automation_jobs[task_id].get('_dm_synced', 0)
                     for entry in job_logs[already_synced:]:
                         automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
                     automation_jobs[task_id]['_dm_synced'] = len(job_logs)
                     time.sleep(1)
                 t.join()
-                # Sync logs finaux
-                job_logs = dm_progress.get(job_id, {}).get('log', [])
-                already_synced = automation_jobs[task_id].get('_dm_synced', 0)
-                for entry in job_logs[already_synced:]:
-                    automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
-                automation_jobs[task_id]['_dm_synced'] = 0
-
                 sent = dm_progress.get(job_id, {}).get('total_sent', 0)
                 skipped = dm_progress.get(job_id, {}).get('total_skipped', 0)
                 log(f"✅ Cycle terminé — {sent} envoyés, {skipped} ignorés")
@@ -924,7 +905,6 @@ def run_automation_task(task_id, task, user_id):
                 swipe_count = int(task.get('swipe_count', 50))
                 like_pct    = int(task.get('like_pct', 80))
                 mode        = 'forcematch' if task_type == 'forcematch' else 'basic'
-
                 t = threading.Thread(
                     target=run_auto_swipe,
                     args=(job_id, account_ids, swipe_count, like_pct, mode, user_id, parallel),
@@ -941,12 +921,6 @@ def run_automation_task(task_id, task, user_id):
                     automation_jobs[task_id]['_sw_synced'] = len(job_logs)
                     time.sleep(1)
                 t.join()
-                job_logs = swipe_progress.get(job_id, {}).get('log', [])
-                already_synced = automation_jobs[task_id].get('_sw_synced', 0)
-                for entry in job_logs[already_synced:]:
-                    automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
-                automation_jobs[task_id]['_sw_synced'] = 0
-
                 likes = swipe_progress.get(job_id, {}).get('total_likes', 0)
                 matches = swipe_progress.get(job_id, {}).get('total_matches', 0)
                 log(f"✅ Cycle terminé — {likes} likes, {matches} matchs")
@@ -966,18 +940,14 @@ def run_automation_task(task_id, task, user_id):
     automation_jobs[task_id]['status'] = 'stopped'
     log("🛑 Tâche arrêtée")
 
-# Match count cache per account
-match_count_cache = {}  # user_id -> {account_user_id: count}
-
-
-
-swipe_progress = {}  # job_id -> dict
+match_count_cache = {}
+swipe_progress = {}
 
 def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, parallel=False):
     accounts = load_accounts(user_id)
     accounts = [a for a in accounts if a['user_id'] in account_ids] if account_ids else accounts
     proxies = get_proxies(user_id)
-    
+
     swipe_progress[job_id] = {
         'status': 'running',
         'total_accounts': len(accounts),
@@ -996,7 +966,6 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
     def log(msg):
         with lock:
             swipe_progress[job_id]['log'].append(msg)
-        print(f"[{job_id}] {msg}")
 
     def process_account(account):
         log(f"▶ Démarrage {account['name']}...")
@@ -1072,14 +1041,12 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
         for account in accounts:
             process_account(account)
 
-    # Sauvegarder les stats persistantes globales
     stats = load_stats(user_id)
     stats['swipes']  += swipe_progress[job_id]['total_likes'] + swipe_progress[job_id]['total_dislikes']
     stats['matches'] += swipe_progress[job_id]['total_matches']
     save_stats(stats, user_id)
     record_daily_stats(user_id)
 
-    # Persister les stats cumulées par compte sur l'objet account
     all_accounts = load_accounts(user_id)
     for acc_result in swipe_progress[job_id]['accounts']:
         for a in all_accounts:
@@ -1088,12 +1055,7 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
                 a['total_matches'] = a.get('total_matches', 0) + acc_result.get('matches', 0)
                 break
     save_accounts(all_accounts, user_id)
-
     swipe_progress[job_id]['status'] = 'done'
-
-# ============================================================
-# MASS DM WORKER (thread)
-# ============================================================
 
 dm_progress = {}
 
@@ -1107,6 +1069,8 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
         'total_accounts': len(accounts),
         'completed_accounts': 0,
         'total_sent': 0,
+        'total_replies': 0,
+        'total_cta': 0,
         'total_skipped': 0,
         'total_failed': 0,
         'accounts': [],
@@ -1122,7 +1086,6 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 
     def log(msg):
         dm_progress[job_id]['log'].append(msg)
-        print(f"[DM:{job_id}] {msg}")
 
     for account in accounts:
         log(f"▶ Compte : {account['name']}")
@@ -1141,6 +1104,8 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                     seen.add(c['_id'])
 
         sent = skipped = failed = 0
+        replies = 0
+        cta = 0
 
         for match in all_matches:
             match_id   = match.get('_id')
@@ -1151,11 +1116,9 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                 failed += 1
                 continue
 
-            # Récupérer l'historique
             hist_r    = tinder_get_messages(account, match_id, proxies)
             messages  = hist_r.get('messages', [])
 
-            # Analyser la convo
             last_sender = None
             has_their_reply = False
             conversation_history = []
@@ -1172,7 +1135,9 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                     has_their_reply = True
                 conversation_history.append({'sender': sender_label, 'text': text})
 
-            # Logger toute la conversation
+            if has_their_reply:
+                replies += 1
+
             log(f"  ─── 💬 {match_name} ({len(conversation_history)} msg) ───")
             if conversation_history:
                 for m in conversation_history:
@@ -1181,7 +1146,6 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
             else:
                 log(f"  (aucun message — nouveau match)")
 
-            # Logique décision
             if last_sender == 'NOUS':
                 skipped += 1
                 log(f"  ⏭ {match_name} — en attente de réponse, on skip")
@@ -1192,7 +1156,6 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                 log(f"  ⏭ {match_name} — déjà contacté, pas de réponse")
                 continue
 
-            # Générer le message
             if mode == 'chatting' and conversation_history:
                 log(f"  🤖 Génération IA en cours...")
                 msg_text = generate_ai_reply(conversation_history, match_name, match_bio, username, social_network)
@@ -1210,6 +1173,9 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
             else:
                 msg_text = random.choice(fallback_messages)
 
+            if username and username.lower() in msg_text.lower():
+                cta += 1
+
             result = tinder_send_message(account, match_id, msg_text, proxies)
             if result['success']:
                 sent += 1
@@ -1221,26 +1187,28 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 
             time.sleep(random.uniform(2, 5))
 
-        acc_result = {'name': account['name'], 'sent': sent, 'skipped': skipped, 'failed': failed}
+        acc_result = {'name': account['name'], 'sent': sent, 'skipped': skipped, 'failed': failed, 'replies': replies, 'cta': cta}
         dm_progress[job_id]['accounts'].append(acc_result)
         dm_progress[job_id]['total_sent']    += sent
+        dm_progress[job_id]['total_replies'] = dm_progress[job_id].get('total_replies', 0) + replies
+        dm_progress[job_id]['total_cta']     = dm_progress[job_id].get('total_cta', 0) + cta
         dm_progress[job_id]['total_skipped'] += skipped
         dm_progress[job_id]['total_failed']  += failed
         dm_progress[job_id]['completed_accounts'] += 1
 
-    # Sauvegarder les stats persistantes
     stats = load_stats(user_id)
     stats['messages'] += dm_progress[job_id]['total_sent']
+    stats['replies']  += dm_progress[job_id].get('total_replies', 0)
+    stats['cta_sent'] += dm_progress[job_id].get('total_cta', 0)
     save_stats(stats, user_id)
     record_daily_stats(user_id)
-
     dm_progress[job_id]['status'] = 'done'
 
 # ============================================================
-# ROUTES API REST
+# ROUTES API
 # ============================================================
 
-# ── AUTH ────────────────────────────────────────────────────
+# ── AUTH ──
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -1254,8 +1222,6 @@ def login():
             active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role']}
             return jsonify({'success': True, 'token': token, 'username': u['username'], 'role': u['role']})
     return jsonify({'success': False, 'error': 'Identifiants incorrects'}), 401
-
-
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -1288,18 +1254,29 @@ def change_password():
     save_users(users)
     return jsonify({'success': True})
 
-# ── ADMIN — USER MANAGEMENT ─────────────────────────────────
+# ── SETTINGS ──
+
+@app.route('/api/settings', methods=['GET'])
+@require_auth
+def get_settings():
+    return jsonify({'success': True, 'settings': load_settings(current_user_id())})
+
+@app.route('/api/settings', methods=['POST'])
+@require_auth
+def update_settings():
+    data = request.json or {}
+    settings = load_settings(current_user_id())
+    settings.update(data)
+    save_settings(settings, current_user_id())
+    return jsonify({'success': True, 'settings': settings})
+
+# ── ADMIN ──
 
 @app.route('/api/admin/users', methods=['GET'])
 @require_admin
 def admin_list_users():
     users = load_users()
-    safe = [{
-        'id': u['id'],
-        'username': u['username'],
-        'role': u['role'],
-        'created_at': u.get('created_at'),
-    } for u in users.values()]
+    safe = [{'id': u['id'], 'username': u['username'], 'role': u['role'], 'created_at': u.get('created_at')} for u in users.values()]
     return jsonify({'success': True, 'users': safe})
 
 @app.route('/api/admin/users', methods=['POST'])
@@ -1319,13 +1296,7 @@ def admin_create_user():
     if any(u['username'] == username for u in users.values()):
         return jsonify({'success': False, 'error': 'Username déjà pris'}), 409
     uid = str(uuid.uuid4())
-    users[uid] = {
-        'id': uid,
-        'username': username,
-        'password': hash_password(password),
-        'role': role,
-        'created_at': time.time(),
-    }
+    users[uid] = {'id': uid, 'username': username, 'password': hash_password(password), 'role': role, 'created_at': time.time()}
     save_users(users)
     return jsonify({'success': True, 'id': uid, 'username': username, 'role': role})
 
@@ -1355,12 +1326,7 @@ def admin_reset_password(user_id):
     save_users(users)
     return jsonify({'success': True})
 
-# ── HELPER pour récupérer le user_id courant ────────────────
-
-def current_user_id():
-    return current_user_data().get('user_id', 'default')
-
-# ── STATS ───────────────────────────────────────────────────
+# ── STATS ──
 
 @app.route('/api/stats', methods=['GET'])
 @require_auth
@@ -1373,16 +1339,246 @@ def get_stats():
 @app.route('/api/stats/reset', methods=['POST'])
 @require_auth
 def reset_stats():
-    save_stats({"swipes": 0, "messages": 0, "matches": 0}, current_user_id())
+    save_stats({"swipes": 0, "messages": 0, "matches": 0, "replies": 0, "cta_sent": 0}, current_user_id())
     return jsonify({'success': True})
 
-# --- AUTOMATION ---
+@app.route('/api/stats/history', methods=['GET'])
+@require_auth
+def get_stats_history():
+    history = load_stats_history(current_user_id())
+    return jsonify({'success': True, 'history': history})
+
+@app.route('/api/stats/alltime', methods=['GET'])
+@require_auth
+def get_stats_alltime():
+    history = load_stats_history(current_user_id())
+    total = {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0}
+    for e in history:
+        total['swipes']   += e.get('swipes', 0)
+        total['messages'] += e.get('messages', 0)
+        total['matches']  += e.get('matches', 0)
+        total['replies']  += e.get('replies', 0)
+        total['cta_sent'] += e.get('cta_sent', 0)
+    return jsonify({'success': True, 'alltime': total, 'days': len(history)})
+
+# ── ACCOUNTS ──
+
+@app.route('/api/accounts', methods=['GET'])
+@require_auth
+def get_accounts():
+    accounts = load_accounts(current_user_id())
+    safe = []
+    for a in accounts:
+        safe.append({
+            'user_id': a.get('user_id'),
+            'name': a.get('name'),
+            'has_refresh': bool(a.get('refresh_token')),
+            'tinder_version': a.get('tinder_version', '17.3.0'),
+            'bio': a.get('bio', ''),
+            'photo': a.get('photo', ''),
+            'age': a.get('age', ''),
+            'tags': a.get('tags', []),
+            'total_likes': a.get('total_likes'),
+            'total_matches': a.get('total_matches'),
+            'cached_match_count': a.get('cached_match_count'),
+            'added_at': a.get('added_at', ''),
+            '_alive': a.get('_alive'),
+        })
+    return jsonify({'success': True, 'accounts': safe})
+
+@app.route('/api/accounts', methods=['POST'])
+@require_auth
+def add_account():
+    data = request.json
+    required = ['token', 'persistent_device_id', 'device_id']
+    if not all(k in data for k in required):
+        return jsonify({'success': False, 'error': 'Champs requis: token, persistent_device_id, device_id'}), 400
+
+    proxies = get_proxies(current_user_id())
+    temp_account = {
+        'token': data['token'],
+        'persistent_device_id': data['persistent_device_id'],
+        'device_id': data['device_id'],
+        'user_id': 'temp_check',
+        'ios_version': data.get('ios_version', '18,4,3'),
+        'tinder_version': data.get('tinder_version', '17.3.0'),
+        'app_version': data.get('app_version', '6630'),
+        'latitude': data.get('latitude', 48.8566),
+        'longitude': data.get('longitude', 2.3522),
+    }
+
+    result = tinder_check_token(temp_account, proxies)
+    if not result['valid']:
+        return jsonify({'success': False, 'error': result['error']}), 400
+
+    account = {
+        **temp_account,
+        'user_id': result['user_id'],
+        'name': result['name'],
+        'bio': result.get('bio', ''),
+        'photo': result.get('photo', ''),
+        'age': result.get('age', ''),
+        'tags': data.get('tags', []),
+        'added_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        '_alive': True,
+    }
+    if data.get('refresh_token'):
+        account['refresh_token'] = data['refresh_token']
+
+    accounts = load_accounts(current_user_id())
+    if any(a['user_id'] == account['user_id'] for a in accounts):
+        return jsonify({'success': False, 'error': 'Compte déjà existant'}), 409
+
+    accounts.append(account)
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True, 'name': result['name'], 'user_id': result['user_id']})
+
+@app.route('/api/accounts/<user_id>', methods=['DELETE'])
+@require_auth
+def delete_account(user_id):
+    accounts = load_accounts(current_user_id())
+    original_count = len(accounts)
+    accounts = [a for a in accounts if a['user_id'] != user_id]
+    if len(accounts) == original_count:
+        return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True})
+
+@app.route('/api/accounts/<user_id>/tags', methods=['POST'])
+@require_auth
+def update_account_tags(user_id):
+    tags = request.json.get('tags', [])
+    accounts = load_accounts(current_user_id())
+    for a in accounts:
+        if a['user_id'] == user_id:
+            a['tags'] = tags
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True})
+
+@app.route('/api/accounts/<user_id>/bio', methods=['POST'])
+@require_auth
+def update_bio(user_id):
+    bio = request.json.get('bio', '')
+    accounts = load_accounts(current_user_id())
+    account = next((a for a in accounts if a['user_id'] == user_id), None)
+    if not account:
+        return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
+    proxies = get_proxies(current_user_id())
+    result = tinder_update_bio(account, bio, proxies)
+    if result['success']:
+        for a in accounts:
+            if a['user_id'] == user_id:
+                a['bio'] = bio
+        save_accounts(accounts, current_user_id())
+    return jsonify(result)
+
+@app.route('/api/accounts/check', methods=['POST'])
+@require_auth
+def check_tokens():
+    accounts = load_accounts(current_user_id())
+    proxies = get_proxies(current_user_id())
+    results = []
+    settings = load_settings(current_user_id())
+    auto_delete = settings.get('auto_delete_dead', False)
+
+    for account in accounts:
+        r = tinder_check_token(account, proxies)
+        account['_alive'] = r['valid']
+        results.append({'name': account['name'], 'user_id': account['user_id'], 'valid': r['valid']})
+        if r['valid']:
+            account['bio']   = r.get('bio', account.get('bio', ''))
+            account['photo'] = r.get('photo', account.get('photo', ''))
+            account['age']   = r.get('age', account.get('age', ''))
+
+    if auto_delete:
+        dead_count = sum(1 for a in accounts if not a.get('_alive', True))
+        accounts = [a for a in accounts if a.get('_alive', True)]
+        print(f"🗑 Auto-delete: {dead_count} compte(s) supprimé(s)")
+
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/api/accounts/match-counts', methods=['GET'])
+@require_auth
+def get_match_counts():
+    user_id = current_user_id()
+    accs = load_accounts(user_id)
+    proxies = get_proxies(user_id)
+    result = {}
+    for account in accs:
+        try:
+            tinder_init_session(account, proxies)
+            matches_r = tinder_get_matches(account, 100, proxies)
+            convs_r   = tinder_get_conversations(account, 100, proxies)
+            all_ids = set()
+            if matches_r.get('success'):
+                for m in matches_r['matches']:
+                    mid = m.get('_id')
+                    if mid: all_ids.add(mid)
+            if convs_r.get('success'):
+                for c in convs_r['conversations']:
+                    mid = c.get('_id')
+                    if mid: all_ids.add(mid)
+            result[account['user_id']] = len(all_ids)
+            account['cached_match_count'] = len(all_ids)
+        except Exception as e:
+            result[account['user_id']] = account.get('cached_match_count', 0)
+    save_accounts(accs, user_id)
+    return jsonify({'success': True, 'counts': result})
+
+# ── TAGS ──
+
+@app.route('/api/tags', methods=['GET'])
+@require_auth
+def get_tags():
+    return jsonify({'success': True, 'tags': load_tags(current_user_id())})
+
+@app.route('/api/tags', methods=['POST'])
+@require_auth
+def create_tag():
+    data = request.json or {}
+    name = data.get('name', '').strip()
+    color = data.get('color', '#448aff')
+    if not name:
+        return jsonify({'success': False, 'error': 'Nom requis'}), 400
+    tags = load_tags(current_user_id())
+    if any(t['name'].lower() == name.lower() for t in tags):
+        return jsonify({'success': False, 'error': 'Tag déjà existant'}), 409
+    tag = {'id': str(uuid.uuid4())[:8], 'name': name, 'color': color}
+    tags.append(tag)
+    save_tags(tags, current_user_id())
+    return jsonify({'success': True, 'tag': tag})
+
+@app.route('/api/tags/<tag_id>', methods=['PUT'])
+@require_auth
+def update_tag(tag_id):
+    data = request.json or {}
+    tags = load_tags(current_user_id())
+    for t in tags:
+        if t['id'] == tag_id:
+            t['name'] = data.get('name', t['name']).strip()
+            t['color'] = data.get('color', t['color'])
+    save_tags(tags, current_user_id())
+    return jsonify({'success': True})
+
+@app.route('/api/tags/<tag_id>', methods=['DELETE'])
+@require_auth
+def delete_tag(tag_id):
+    tags = load_tags(current_user_id())
+    tags = [t for t in tags if t['id'] != tag_id]
+    save_tags(tags, current_user_id())
+    accounts = load_accounts(current_user_id())
+    for a in accounts:
+        a['tags'] = [tid for tid in a.get('tags', []) if tid != tag_id]
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True})
+
+# ── AUTOMATION ──
 
 @app.route('/api/automation', methods=['GET'])
 @require_auth
 def get_automation():
     tasks = load_automation(current_user_id())
-    # Enrichir avec le statut live
     result = []
     for t in tasks:
         tid = t['id']
@@ -1454,243 +1650,7 @@ def automation_status(task_id):
                     'next_run_str': live.get('next_run_str', '—'),
                     'log': live.get('log', [])[-50:]})
 
-# --- STATS HISTORY ---
-
-@app.route('/api/stats/history', methods=['GET'])
-@require_auth
-def get_stats_history():
-    history = load_stats_history(current_user_id())
-    return jsonify({'success': True, 'history': history})
-
-@app.route('/api/stats/alltime', methods=['GET'])
-@require_auth
-def get_stats_alltime():
-    history = load_stats_history(current_user_id())
-    total = {'swipes': 0, 'messages': 0, 'matches': 0}
-    for e in history:
-        total['swipes']   += e.get('swipes', 0)
-        total['messages'] += e.get('messages', 0)
-        total['matches']  += e.get('matches', 0)
-    return jsonify({'success': True, 'alltime': total, 'days': len(history)})
-
-# --- MATCH COUNT PER ACCOUNT ---
-
-@app.route('/api/accounts/match-counts', methods=['GET'])
-@require_auth
-def get_match_counts():
-    """
-    Compte le vrai nombre de matchs par compte — même méthode que Mass DM :
-    tinder_get_matches (message=0) + tinder_get_conversations (message=1)
-    dédupliqués par _id. Rien n'est envoyé.
-    """
-    user_id = current_user_id()
-    accs = load_accounts(user_id)
-    proxies = get_proxies(user_id)
-    result = {}
-    for account in accs:
-        try:
-            tinder_init_session(account, proxies)
-
-            matches_r = tinder_get_matches(account, 100, proxies)
-            convs_r   = tinder_get_conversations(account, 100, proxies)
-
-            all_ids = set()
-
-            if matches_r.get('success'):
-                for m in matches_r['matches']:
-                    mid = m.get('_id')
-                    if mid:
-                        all_ids.add(mid)
-
-            if convs_r.get('success'):
-                for c in convs_r['conversations']:
-                    mid = c.get('_id')
-                    if mid:
-                        all_ids.add(mid)
-
-            result[account['user_id']] = len(all_ids)
-
-            # Persister sur l'objet account pour affichage offline
-            account['cached_match_count'] = len(all_ids)
-
-        except Exception as e:
-            # Fallback : valeur cachée si disponible
-            result[account['user_id']] = account.get('cached_match_count', 0)
-
-    # Sauvegarder les counts cachés sur les comptes
-    save_accounts(accs, user_id)
-
-    return jsonify({'success': True, 'counts': result})
-
-# --- ACCOUNTS ---
-
-@app.route('/api/accounts', methods=['GET'])
-@require_auth
-def get_accounts():
-    accounts = load_accounts(current_user_id())
-    safe = []
-    for a in accounts:
-        safe.append({
-            'user_id': a.get('user_id'),
-            'name': a.get('name'),
-            'has_refresh': bool(a.get('refresh_token')),
-            'tinder_version': a.get('tinder_version', '17.3.0'),
-            'bio': a.get('bio', ''),
-            'photo': a.get('photo', ''),
-            'age': a.get('age', ''),
-            'tags': a.get('tags', []),
-            'total_likes':   a.get('total_likes'),
-            'total_matches': a.get('total_matches'),
-            'cached_match_count': a.get('cached_match_count'),
-        })
-    return jsonify({'success': True, 'accounts': safe})
-
-@app.route('/api/accounts', methods=['POST'])
-@require_auth
-def add_account():
-    data = request.json
-    required = ['token', 'persistent_device_id', 'device_id']
-    if not all(k in data for k in required):
-        return jsonify({'success': False, 'error': 'Champs requis: token, persistent_device_id, device_id'}), 400
-
-    proxies = get_proxies(current_user_id())
-
-    # Vérifier le token
-    temp_account = {
-        'token': data['token'],
-        'persistent_device_id': data['persistent_device_id'],
-        'device_id': data['device_id'],
-        'user_id': 'temp_check',
-        'ios_version': data.get('ios_version', '18,4,3'),
-        'tinder_version': data.get('tinder_version', '17.3.0'),
-        'app_version': data.get('app_version', '6630'),
-        'latitude': data.get('latitude', 48.8566),
-        'longitude': data.get('longitude', 2.3522),
-    }
-
-    result = tinder_check_token(temp_account, proxies)
-    if not result['valid']:
-        return jsonify({'success': False, 'error': result['error']}), 400
-
-    account = {
-        **temp_account,
-        'user_id': result['user_id'],
-        'name': result['name'],
-        'bio': result.get('bio', ''),
-        'photo': result.get('photo', ''),
-        'age': result.get('age', ''),
-        'tags': data.get('tags', []),
-    }
-    if data.get('refresh_token'):
-        account['refresh_token'] = data['refresh_token']
-
-    accounts = load_accounts(current_user_id())
-    if any(a['user_id'] == account['user_id'] for a in accounts):
-        return jsonify({'success': False, 'error': 'Compte déjà existant'}), 409
-
-    accounts.append(account)
-    save_accounts(accounts, current_user_id())
-    return jsonify({'success': True, 'name': result['name'], 'user_id': result['user_id']})
-
-@app.route('/api/accounts/<user_id>/tags', methods=['POST'])
-@require_auth
-def update_account_tags(user_id):
-    tags = request.json.get('tags', [])
-    accounts = load_accounts(current_user_id())
-    for a in accounts:
-        if a['user_id'] == user_id:
-            a['tags'] = tags
-    save_accounts(accounts, current_user_id())
-    return jsonify({'success': True})
-
-# --- TAGS ---
-
-@app.route('/api/tags', methods=['GET'])
-@require_auth
-def get_tags():
-    return jsonify({'success': True, 'tags': load_tags(current_user_id())})
-
-@app.route('/api/tags', methods=['POST'])
-@require_auth
-def create_tag():
-    data = request.json or {}
-    name = data.get('name', '').strip()
-    color = data.get('color', '#448aff')
-    if not name:
-        return jsonify({'success': False, 'error': 'Nom requis'}), 400
-    tags = load_tags(current_user_id())
-    if any(t['name'].lower() == name.lower() for t in tags):
-        return jsonify({'success': False, 'error': 'Tag déjà existant'}), 409
-    tag = {'id': str(uuid.uuid4())[:8], 'name': name, 'color': color}
-    tags.append(tag)
-    save_tags(tags, current_user_id())
-    return jsonify({'success': True, 'tag': tag})
-
-@app.route('/api/tags/<tag_id>', methods=['PUT'])
-@require_auth
-def update_tag(tag_id):
-    data = request.json or {}
-    tags = load_tags(current_user_id())
-    for t in tags:
-        if t['id'] == tag_id:
-            t['name'] = data.get('name', t['name']).strip()
-            t['color'] = data.get('color', t['color'])
-    save_tags(tags, current_user_id())
-    return jsonify({'success': True})
-
-@app.route('/api/tags/<tag_id>', methods=['DELETE'])
-@require_auth
-def delete_tag(tag_id):
-    tags = load_tags(current_user_id())
-    tags = [t for t in tags if t['id'] != tag_id]
-    save_tags(tags, current_user_id())
-    # Supprimer le tag de tous les comptes
-    accounts = load_accounts(current_user_id())
-    for a in accounts:
-        a['tags'] = [tid for tid in a.get('tags', []) if tid != tag_id]
-    save_accounts(accounts, current_user_id())
-    return jsonify({'success': True})
-    accounts = load_accounts(current_user_id())
-    accounts = [a for a in accounts if a['user_id'] != user_id]
-    save_accounts(accounts, current_user_id())
-    return jsonify({'success': True})
-
-@app.route('/api/accounts/check', methods=['POST'])
-@require_auth
-def check_tokens():
-    accounts = load_accounts(current_user_id())
-    proxies = get_proxies(current_user_id())
-    results = []
-    valid_accounts = []
-    for account in accounts:
-        r = tinder_check_token(account, proxies)
-        results.append({'name': account['name'], 'user_id': account['user_id'], 'valid': r['valid']})
-        if r['valid']:
-            account['bio']   = r.get('bio', account.get('bio', ''))
-            account['photo'] = r.get('photo', account.get('photo', ''))
-            account['age']   = r.get('age', account.get('age', ''))
-            valid_accounts.append(account)
-    save_accounts(valid_accounts, current_user_id())
-    return jsonify({'success': True, 'results': results})
-
-@app.route('/api/accounts/<user_id>/bio', methods=['POST'])
-@require_auth
-def update_bio(user_id):
-    bio = request.json.get('bio', '')
-    accounts = load_accounts(current_user_id())
-    account = next((a for a in accounts if a['user_id'] == user_id), None)
-    if not account:
-        return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
-    proxies = get_proxies(current_user_id())
-    result = tinder_update_bio(account, bio, proxies)
-    if result['success']:
-        for a in accounts:
-            if a['user_id'] == user_id:
-                a['bio'] = bio
-        save_accounts(accounts, current_user_id())
-    return jsonify(result)
-
-# --- AUTO SWIPE ---
+# ── SWIPE ──
 
 @app.route('/api/swipe/start', methods=['POST'])
 @require_auth
@@ -1702,7 +1662,6 @@ def start_swipe():
     like_pct     = int(data.get('like_percentage', 80))
     mode         = data.get('mode', 'basic')
     parallel     = bool(data.get('parallel', False))
-
     thread = threading.Thread(
         target=run_auto_swipe,
         args=(job_id, account_ids, swipe_count, like_pct, mode, current_user_id(), parallel),
@@ -1718,7 +1677,7 @@ def swipe_status(job_id):
         return jsonify({'success': False, 'error': 'Job introuvable'}), 404
     return jsonify({'success': True, **swipe_progress[job_id]})
 
-# --- MASS DM ---
+# ── MASS DM ──
 
 @app.route('/api/dm/start', methods=['POST'])
 @require_auth
@@ -1728,11 +1687,9 @@ def start_dm():
     account_ids    = data.get('account_ids', [])
     username       = data.get('username', '')
     social_network = data.get('social_network', 'Instagram')
-    mode           = data.get('mode', 'massdm')  # 'massdm' | 'chatting'
-
+    mode           = data.get('mode', 'massdm')
     if not username:
         return jsonify({'success': False, 'error': 'Username requis'}), 400
-
     thread = threading.Thread(
         target=run_mass_dm,
         args=(job_id, account_ids, username, social_network, mode, current_user_id()),
@@ -1748,7 +1705,7 @@ def dm_status(job_id):
         return jsonify({'success': False, 'error': 'Job introuvable'}), 404
     return jsonify({'success': True, **dm_progress[job_id]})
 
-# --- PROXY ---
+# ── PROXY ──
 
 @app.route('/api/proxy', methods=['GET'])
 @require_auth
@@ -1759,11 +1716,7 @@ def get_proxy():
 @require_auth
 def set_proxy():
     data = request.json
-    config = {
-        'enabled': data.get('enabled', False),
-        'proxy_url': data.get('proxy_url'),
-        'rotation_link': data.get('rotation_link')
-    }
+    config = {'enabled': data.get('enabled', False), 'proxy_url': data.get('proxy_url'), 'rotation_link': data.get('rotation_link')}
     save_proxy(config, current_user_id())
     return jsonify({'success': True})
 
@@ -1789,7 +1742,7 @@ def rotate_proxy():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# --- MATCHES (lecture) ---
+# ── MATCHES ──
 
 @app.route('/api/matches', methods=['GET'])
 @require_auth
@@ -1825,32 +1778,19 @@ def check_and_reset_stats():
 
     changed = False
     users = load_users()
-    # Reset pour tous les utilisateurs si nouveau jour
     for uid in list(users.keys()) + ['default']:
         data = all_data.get(uid, {})
         last_reset = data.get('last_reset', None)
         if last_reset != today:
-            all_data[uid] = {'swipes': 0, 'messages': 0, 'matches': 0, 'last_reset': today}
+            all_data[uid] = {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0, 'last_reset': today}
             changed = True
 
     if changed:
-        print(f"🔄 Nouveau jour ({today}) — reset stats de tous les utilisateurs")
+        print(f"🔄 Nouveau jour ({today}) — reset stats")
         with open(STATS_FILE, 'w') as f:
             json.dump(all_data, f, indent=2)
     else:
         print(f"✅ Stats du jour déjà chargées ({today})")
-
-def load_stats(user_id="default"):
-    try:
-        with open(STATS_FILE, 'r') as f:
-            d = json.load(f).get(str(user_id), {})
-            return {
-                'swipes':   d.get('swipes', 0),
-                'messages': d.get('messages', 0),
-                'matches':  d.get('matches', 0),
-            }
-    except:
-        return {'swipes': 0, 'messages': 0, 'matches': 0}
 
 # ============================================================
 # LANCEMENT
@@ -1859,7 +1799,5 @@ def load_stats(user_id="default"):
 if __name__ == '__main__':
     ensure_admin_exists()
     check_and_reset_stats()
-
-    print("🚀 Backend panel démarré sur http://localhost:5001")
-    print("📁 Fichiers de données dans le répertoire courant")
+    print("🚀 Backend panel démarré sur http://localhost:5002")
     app.run(host='0.0.0.0', port=5002, debug=False)
