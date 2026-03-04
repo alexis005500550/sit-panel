@@ -915,14 +915,11 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 # ROUTES API
 # ============================================================
 
-@app.route('/')
-def home():
-    try:
-        _redis.ping()
-        redis_ok = True
-    except:
-        redis_ok = False
-    return jsonify({'status': 'ok', 'redis': redis_ok})
+
+
+
+
+
 
 # ── AUTH ──
 
@@ -1414,6 +1411,15 @@ def get_matches_list():
 # ============================================================
 # RESET AUTO MINUIT
 # ============================================================
+
+from flask import send_from_directory
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    return send_from_directory('templates', 'index.html')
 
 def check_and_reset_stats():
     import datetime
