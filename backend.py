@@ -36,7 +36,7 @@ REDIS_URL = os.environ.get(
     'redis://default:AZTyAAIncDE2OGUzNmE4MjYyNjY0ZDJiYWQyMzhmMmY0Y2Q1ZjVhZHAxMzgxMzA@exact-heron-38130.upstash.io:6379'
 )
 
-_redis = redis_lib.from_url(REDIS_URL, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+_redis = redis_lib.from_url(REDIS_URL, decode_responses=True)
 
 def r_get(key, default=None):
     try:
