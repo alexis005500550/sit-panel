@@ -1437,8 +1437,9 @@ def check_and_reset_stats():
 # LANCEMENT
 # ============================================================
 
+ensure_admin_exists()
+check_and_reset_stats()
+
 if __name__ == '__main__':
-    ensure_admin_exists()
-    check_and_reset_stats()
     print("🚀 Backend démarré sur http://localhost:5002")
     app.run(host='0.0.0.0', port=5002, debug=False)
