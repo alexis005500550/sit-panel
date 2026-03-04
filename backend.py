@@ -1,8 +1,9 @@
 """
 Backend Flask - API REST pour le panel web Tinder Bot
+Proxy par compte : chaque compte peut avoir son propre proxy
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import json
 import time
@@ -12,6 +13,7 @@ import uuid
 import os
 import hashlib
 import secrets
+import fcntl
 
 try:
     from curl_cffi import requests as curl_requests
@@ -35,13 +37,52 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tinderbot-secret-key-change-me-in-prod')
-CORS(app, supports_credentials=True, origins=['*'])
+CORS(app,
+     supports_credentials=False,
+     origins='*',
+     allow_headers=['Content-Type', 'X-Auth-Token'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
-@app.route('/')
-def home():
-    return render_template("index.html")
+# ============================================================
+# AUTH TOKENS — persistés sur disque (multi-worker safe)
+# ============================================================
 
-active_tokens = {}
+TOKENS_FILE  = "active_tokens.json"
+_tokens_lock = threading.Lock()
+
+def _load_tokens():
+    try:
+        with open(TOKENS_FILE, 'r') as f:
+            fcntl.flock(f, fcntl.LOCK_SH)
+            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+            return data
+    except:
+        return {}
+
+def _save_tokens(tokens):
+    with open(TOKENS_FILE, 'w') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        json.dump(tokens, f, indent=2)
+        fcntl.flock(f, fcntl.LOCK_UN)
+
+def _get_token(token):
+    if not token:
+        return None
+    return _load_tokens().get(token)
+
+def _set_token(token, data):
+    with _tokens_lock:
+        tokens = _load_tokens()
+        tokens[token] = data
+        _save_tokens(tokens)
+
+def _del_token(token):
+    with _tokens_lock:
+        tokens = _load_tokens()
+        if token in tokens:
+            del tokens[token]
+            _save_tokens(tokens)
 
 def generate_token():
     return secrets.token_hex(32)
@@ -54,7 +95,7 @@ def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = get_token_from_request()
-        if not token or token not in active_tokens:
+        if not token or not _get_token(token):
             return jsonify({'success': False, 'error': 'Non authentifié'}), 401
         return f(*args, **kwargs)
     return decorated
@@ -64,16 +105,17 @@ def require_admin(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = get_token_from_request()
-        if not token or token not in active_tokens:
+        data  = _get_token(token)
+        if not token or not data:
             return jsonify({'success': False, 'error': 'Non authentifié'}), 401
-        if active_tokens[token].get('role') != 'admin':
+        if data.get('role') != 'admin':
             return jsonify({'success': False, 'error': 'Accès refusé — admin requis'}), 403
         return f(*args, **kwargs)
     return decorated
 
 def current_user_data():
     token = get_token_from_request()
-    return active_tokens.get(token, {})
+    return _get_token(token) or {}
 
 def current_user_id():
     return current_user_data().get('user_id', 'default')
@@ -95,6 +137,12 @@ def get_current_ip(proxies=None):
     except:
         return None
 
+def get_proxies_for_account(account, user_id="default"):
+    account_proxy = account.get('proxy_url', '').strip() if account.get('proxy_enabled') else ''
+    if account_proxy:
+        return {'http': account_proxy, 'https': account_proxy}
+    return get_proxies(user_id)
+
 # ============================================================
 # FICHIERS DE DONNÉES
 # ============================================================
@@ -108,6 +156,7 @@ USERS_FILE         = "panel_users.json"
 TAGS_FILE          = "panel_tags.json"
 AUTOMATION_FILE    = "automation_config.json"
 SETTINGS_FILE      = "panel_settings.json"
+PROXY_POOL_FILE    = "proxy_pool.json"
 
 # --- SETTINGS ---
 
@@ -335,6 +384,35 @@ def has_message_sent(user_id, account_user_id, match_id):
     return f"{account_user_id}_{match_id}" in history
 
 # ============================================================
+# PROXY POOL
+# ============================================================
+
+def load_proxy_pool(user_id="default"):
+    try:
+        with open(PROXY_POOL_FILE, 'r') as f:
+            return json.load(f).get(str(user_id), [])
+    except:
+        return []
+
+def save_proxy_pool(pool, user_id="default"):
+    try:
+        with open(PROXY_POOL_FILE, 'r') as f:
+            all_data = json.load(f)
+    except:
+        all_data = {}
+    all_data[str(user_id)] = pool
+    with open(PROXY_POOL_FILE, 'w') as f:
+        json.dump(all_data, f, indent=2)
+
+def pop_proxy_from_pool(user_id="default"):
+    pool = load_proxy_pool(user_id)
+    if not pool:
+        return None
+    proxy = pool.pop(0)
+    save_proxy_pool(pool, user_id)
+    return proxy
+
+# ============================================================
 # TINDER API
 # ============================================================
 
@@ -530,11 +608,20 @@ def tinder_get_conversations(account, count=60, proxies=None):
 def tinder_send_message(account, match_id, message_text, proxies=None):
     headers = build_headers(account, include_content_type=True)
     try:
-        resp = make_request('POST', f"https://api.gotinder.com/user/matches/{match_id}", headers, proxies=proxies, json_data={"message": message_text})
+        body = {
+            "message": message_text,
+            "matchId": match_id,
+            "userId": account['user_id'],
+            "otherId": match_id.split('-')[1] if '-' in match_id else match_id,
+            "tempMessageId": str(int(time.time() * 1000)),
+        }
+        resp = make_request('POST', f"https://api.gotinder.com/user/matches/{match_id}", headers, proxies=proxies, json_data=body)
+        print(f"[SEND] status={resp.status_code} body={resp.text[:300]}")
         if resp.status_code == 200:
             return {'success': True}
         return {'success': False, 'error': f"HTTP {resp.status_code}", 'details': resp.text[:200]}
     except Exception as e:
+        print(f"[SEND] exception: {e}")
         return {'success': False, 'error': str(e)}
 
 def tinder_get_messages(account, match_id, proxies=None):
@@ -561,8 +648,8 @@ def tinder_update_bio(account, bio, proxies=None):
 # IA
 # ============================================================
 
-OPENAI_API_KEY = "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"
-OPENAI_MODEL  = "gpt-4.1-mini"
+OPENAI_API_KEY = "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"
+OPENAI_MODEL   = "gpt-4.1-mini"
 
 PERSONA = """
 Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
@@ -605,28 +692,11 @@ Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
 - Quand il propose de partir ailleurs → lntsa DIRECTEMENT, pas "lntsa ou snap ?".
 """
 
-def _is_english(text):
-    en_words = ['how are you', 'what are you', 'nice to meet', 'how do you', 'good morning',
-                'good evening', 'good night', 'thank you', 'what\'s up', 'lovely', 'beautiful',
-                'how was your', 'what do you', 'are you', 'do you', 'can you', 'i am', "i'm"]
-    t = text.lower()
-    return any(w in t for w in en_words)
 
-def _force_lntsa(text):
-    for wrong in ['Instagram', 'instagram', 'INSTAGRAM', 'Insta', 'INSTA', 'lnsta', 'LNSTA', 'lsnta', 'LSNTA', 'Lntsa', 'LNTSA']:
-        text = text.replace(wrong, 'lntsa')
-    return text
-
-def _clean_reply(reply):
-    reply = reply.strip().strip('"').strip("'")
-    for prefix in ['réponse:', 'response:', 'message:', 'sarah:', 'moi:']:
-        if reply.lower().startswith(prefix):
-            reply = reply[len(prefix):].strip()
-    reply = _force_lntsa(reply)
-    reply = reply.replace('quoi est ton', "c'est quoi ton").replace('quoi est ta', "c'est quoi ta")
-    return reply
-
-def _call_openai(prompt, max_tokens=150):
+def _call_openai(prompt, max_tokens=100):
+    if not OPENAI_API_KEY or OPENAI_API_KEY == "REMPLACE_PAR_TA_CLE_OPENAI":
+        print("⚠️  Clé OpenAI non configurée")
+        return None
     try:
         resp = requests.post(
             "https://api.openai.com/v1/chat/completions",
@@ -636,222 +706,282 @@ def _call_openai(prompt, max_tokens=150):
             timeout=30
         )
         if resp.status_code == 200:
-            return _clean_reply(resp.json()['choices'][0]['message']['content'])
+            reply = resp.json()['choices'][0]['message']['content'].strip().strip('"').strip("'")
+            for prefix in ['réponse:', 'response:', 'message:', 'sarah:']:
+                if reply.lower().startswith(prefix):
+                    reply = reply[len(prefix):].strip()
+            reply = reply.replace('Lntsa', 'lntsa').replace('LNTSA', 'lntsa')
+            reply = reply.replace('Insta', 'lntsa').replace('insta', 'lntsa').replace('INSTA', 'lntsa')
+            reply = reply.replace('lnsta', 'lntsa').replace('lsnta', 'lntsa')
+            reply = reply.replace('quoi est ton', "c'est quoi ton").replace('quoi est ta', "c'est quoi ta")
+            reply = reply.replace('Instagram', 'lntsa').replace('instagram', 'lntsa')
+            return reply
         else:
-            print(f"⚠️  OpenAI {resp.status_code}: {resp.text[:150]}")
+            print(f"⚠️  OpenAI {resp.status_code}: {resp.text[:200]}")
+            return None
     except Exception as e:
-        print(f"⚠️  Exception: {e}")
-    return None
+        print(f"⚠️  OpenAI exception: {e}")
+        return None
+
 
 def generate_ai_reply(conversation_history, match_name, match_bio, username, social_network):
     our_messages   = [m for m in conversation_history if m['sender'] == 'NOUS']
     their_messages = [m for m in conversation_history if m['sender'] != 'NOUS']
-    if not their_messages:
-        return None
 
-    formatted = "\n".join(
-        f"TOI (Sarah): {m['text']}" if m['sender'] == 'NOUS' else f"LUI ({m['sender']}): {m['text']}"
-        for m in conversation_history[-12:]
-    )
-    total_exchanges = min(len(our_messages), len(their_messages))
+    if not their_messages:
+        opener_prompt = f"""{PERSONA}
+C'est un tout nouveau match, aucun message échangé.
+Son nom: {match_name}
+{"Sa bio: " + match_bio if match_bio else "Pas de bio."}
+Envoie un premier message d'accroche court et naturel.
+JAMAIS "coucou ça va ?". Quelque chose de taquin ou original.
+Max 10 mots, pas de guillemets, pas de point final."""
+        return _call_openai(opener_prompt, max_tokens=60)
 
     already_redirected = False
     soft_hint_given    = False
+    soft_hint_markers = ['jamais sur tinder', 'jamais ici', "j'me perds", 'notifs',
+                          'tinder pour', 'ici pour', 'jamais là', "pas trop l'habitude",
+                          'parler bcp sur tinder', "pas trop présente", "j'check pas",
+                          "longues discu sur tinder", "longues discu ici"]
     if username:
-        redirect_markers  = [username.lower(), 'lntsa', 'instagram', social_network.lower() if social_network else '']
-        soft_hint_markers = ['jamais sur tinder', 'jamais ici', "j'me perds", 'notifs',
-                             "pas trop l'habitude", 'parler bcp sur tinder', "pas trop présente",
-                             "j'check pas", "longues discu sur tinder", "longues discu ici"]
         for msg in our_messages:
             ml = msg['text'].lower()
-            if any(m in ml for m in redirect_markers if m):
+            if username.lower() in ml:
                 already_redirected = True
                 break
-            if any(h in ml for h in soft_hint_markers):
+            if any(hint in ml for hint in soft_hint_markers):
                 soft_hint_given = True
 
     if already_redirected:
-        return None
+        return "__CTA_SENT__"
 
-    last_msg  = their_messages[-1]['text']
-    lml       = last_msg.lower()
+    formatted = "\n".join(
+        f"TOI (Sarah): {m['text']}" if m['sender'] == 'NOUS' else f"LUI ({m['sender']}): {m['text']}"
+        for m in conversation_history[-10:]
+    )
+    total_exchanges = min(len(our_messages), len(their_messages))
+    last_their_msg  = their_messages[-1]['text']
+    lml             = last_their_msg.lower()
 
-    he_proposes_insta   = 'insta' in lml or 'instagram' in lml
-    he_proposes_snap    = 'snap' in lml or 'snapchat' in lml
-    he_proposes_social  = he_proposes_insta or he_proposes_snap or any(
-        w in lml for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'appel'])
+    he_proposes_insta  = 'insta' in lml or 'instagram' in lml
+    he_proposes_snap   = 'snap' in lml or 'snapchat' in lml
+    he_proposes_social = he_proposes_insta or he_proposes_snap or any(
+        w in lml for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'appel', 'tel'])
 
-    flirty_words = ['canon', 'magnifique', 'splendide', 'sexy', 'bombe', 'hot', '🔥', '😍', '❤️', 'jolie', 'belle', 'mignonne']
-    is_compliment = any(w in lml for w in flirty_words) or any(
-        p in lml for p in ["t'es belle", 'trop belle', 'trop mignonne', 'vraiment jolie', 'trop jolie', 'super jolie'])
-    is_flirty     = is_compliment
-    is_question  = '?' in last_msg
-    direct_words = ['date', 'sortir', 'voir', 'rencontrer', 'rdv', 'ce soir', 'week-end', 'weekend', 'dispo', 'verre', 'resto']
+    def detect_pseudo_given(msg_text, history):
+        detection_prompt = f"""Analyse ce message dans le contexte de la conversation.
+Historique récent:
+{chr(10).join(f"{'NOUS' if m['sender'] == 'NOUS' else m['sender']}: {m['text']}" for m in history[-4:])}
+
+Message à analyser: "{msg_text}"
+
+Est-ce que cette personne donne son pseudo Instagram/réseau social dans ce message ?
+Réponds UNIQUEMENT par "oui" ou "non"."""
+        result = _call_openai(detection_prompt, max_tokens=5)
+        return result and result.strip().lower().startswith('oui')
+
+    he_gave_his_pseudo = detect_pseudo_given(last_their_msg, conversation_history)
+
+    flirty_words      = ['croque','canon','magnifique','splendide','sexy','bombe',
+                         'dingue','charmante','hot','🔥','😍','❤️']
+    compliment_phrases= ["t'es belle","tu es belle","t'es canon","trop belle",
+                         "trop mignonne","t'es mignonne","tu es mignonne","vraiment jolie","trop jolie"]
+    is_flirty    = any(w in lml for w in flirty_words)
+    is_compliment= is_flirty or any(p in lml for p in compliment_phrases)
+    is_question  = '?' in last_their_msg
+
+    direct_words = ['envie','date','sortir','voir','rencontrer','rdv','ce soir',
+                    'week-end','weekend','dispo','disponible','on se voit','verre','resto']
     is_direct    = any(w in lml for w in direct_words)
 
-    skeptical_words = ['fake', 'bot', 'vraie', 'réelle', 'arnaque', 'followers', 'follow',
-                       'abonnés', 'abonné', 'promo', 'pub', 'gratter', 'onlyfans', 'of ',
-                       'là pour les abonnées', 'là pour ton insta', 'là pour lntsa']
+    skeptical_words = ['fake','bot','vraie','réelle','arnaque','followers',
+                       'follow','abonnés','promo','pub','gratter']
     is_skeptical = any(w in lml for w in skeptical_words)
 
-    location_kw = ["d'où", 'où tu', 'ville', 'habite', 'secteur', 'coin', "t'habite",
-                   'quel bar', 'quel parc', 'où ça', 'quel coin', 'dans quel']
-    he_asked_location = any(k in lml for k in location_kw) or ('où' in lml and len(lml) < 40)
-    he_asked_job    = any(k in lml for k in ['fais quoi', 'travail', 'boulot', 'métier', 'études', 'taff']) and is_question
-    he_asked_et_toi = 'et toi' in lml
-    he_asked_cava   = any(p in lml for p in ['ça va', 'ca va', 'comment tu vas', 'tu vas bien'])
-    short_reply     = len(last_msg.split()) <= 4 and any(w in lml for w in ['tranquille', 'ça va', 'ca va', 'ouais', 'bien', 'nickel'])
-    is_confusion    = len(last_msg) < 45 and any(p in lml for p in ['hein', 'comprends pas', 'compris quoi', 'cest quoi', "c'est quoi ça"])
-    is_english      = _is_english(last_msg)
-    is_media = last_msg.startswith('http') and any(ext in last_msg for ext in ['.gif', '.jpg', '.png', '.mp4', 'tenor.com', 'giphy.com'])
+    location_kw  = ["d'où","d ou",'où tu','ville','habite','vis où','viens','secteur',
+                    'coin','region',"t'habite",'tu habites','habite ou','quel bar',
+                    'quel parc','où ça',"c'est où",'ou ca','quel coin','dans quel','ou habites']
+    he_asked_location = any(kw in lml for kw in location_kw) or ('où' in lml and len(lml) < 35)
+
+    job_kw       = ['fais quoi','travail','boulot','métier','études','taff','bosses']
+    he_asked_job = any(kw in lml for kw in job_kw) and is_question
+
+    he_asked_et_toi = "et toi" in lml
+    he_asked_cava   = any(p in lml for p in ['ça va','ca va','comment tu vas',
+                                              'comment ça va','tu vas bien','comment vas-tu'])
+    short_positive  = (len(last_their_msg.split()) <= 4 and
+                       any(w in lml for w in ['tranquille','ça va','ca va','ouais','oui ','bien','nickel']))
+
+    confusion_phrases = ['comment ça','comment ca','hein ?','hein ','je comprends pas',
+                         'comprend pas',"j'ai pas compris",'compris quoi']
+    he_is_confused  = (len(last_their_msg) < 40 and
+                       any(p in lml for p in confusion_phrases) and
+                       not any(q in lml for q in ['de quoi','quoi comme','quoi tu','quoi elle']))
+
+    q_already_answered = False
+    if is_question:
+        q_words = ['fais quoi','tu fais','travail','bosses','étudies','études','comm','habite','où']
+        if any(q in lml for q in q_words):
+            for msg in our_messages:
+                ml2 = msg['text'].lower()
+                if (('comm' in ml2 or 'fac' in ml2 or 'étudiante' in ml2) and
+                        any(q in lml for q in ['fais quoi','tu fais','travail','bosses'])):
+                    q_already_answered = True; break
+                if (('paris' in ml2 or 'lyon' in ml2 or 'habite' in ml2) and
+                        any(q in lml for q in ['habite','où','ville'])):
+                    q_already_answered = True; break
 
     if total_exchanges >= 12:
-        full_p, hint_p = 1.0, 0.0
+        full_redirect_prob, soft_hint_prob = 1.0, 0.0
     elif total_exchanges >= 10:
-        full_p = 0.85 if soft_hint_given else 0.3
-        hint_p = 0.0  if soft_hint_given else 0.4
+        full_redirect_prob = 0.85 if soft_hint_given else 0.3
+        soft_hint_prob     = 0.0  if soft_hint_given else 0.4
     elif total_exchanges >= 8:
-        full_p = 0.6  if soft_hint_given else 0.15
-        hint_p = 0.0  if soft_hint_given else 0.5
+        full_redirect_prob = 0.6  if soft_hint_given else 0.15
+        soft_hint_prob     = 0.0  if soft_hint_given else 0.5
     elif total_exchanges >= 6:
-        full_p = 0.4  if soft_hint_given else 0.0
-        hint_p = 0.45
+        full_redirect_prob = 0.4  if soft_hint_given else 0.0
+        soft_hint_prob     = 0.45
     elif total_exchanges >= 5:
-        full_p, hint_p = 0.0, 0.35
+        full_redirect_prob, soft_hint_prob = 0.0, 0.35
     else:
-        full_p, hint_p = 0.0, 0.0
+        full_redirect_prob, soft_hint_prob = 0.0, 0.0
 
-    r1, r2 = random.random(), random.random()
-    should_soft_hint = not soft_hint_given and username and r1 < hint_p
-    should_redirect  = username and r2 < full_p and (soft_hint_given or total_exchanges >= 11)
-
-    greeting_words   = ['salut', 'hello', 'hey', 'coucou', 'bonjour', 'cc', 'slt', 'hi', 'yo', 'wesh', 'hola', 'holaa']
-    is_first_message = total_exchanges == 0
-    is_greeting_only = any(lml.startswith(w) or lml == w for w in greeting_words) and len(last_msg.split()) <= 6 and not is_compliment
+    should_soft_hint = (not soft_hint_given and username and random.random() < soft_hint_prob)
+    should_redirect  = (username and random.random() < full_redirect_prob and
+                        (soft_hint_given or total_exchanges >= 11))
 
     p = PERSONA
 
-    if is_skeptical:
+    greeting_words   = ['salut','hello','hey','coucou','bonjour','cc','slt','hi','yo','wesh']
+    is_simple_greeting = (any(lml.startswith(w) or lml == w for w in greeting_words) and
+                          len(last_their_msg.split()) <= 5 and
+                          total_exchanges == 0 and not (is_compliment or is_flirty))
+
+    if short_positive and not he_asked_cava:
         prompt = f"""{p}
-{match_name} est méfiant ou t'accuse: "{last_msg}"
+{match_name} a répondu court : "{last_their_msg}"
 Historique:\n{formatted}
-DÉSAMORCE avec humour. Rassure-le sans être défensive. Ne mentionne PAS lntsa ici.
-12-22 mots, ton léger, pas de guillemets."""
-    elif is_media:
-        prompt = f"""{p}
-{match_name} t'a envoyé un média. Tu NE VOIS PAS son contenu.
-Historique:\n{formatted}
-NE COMMENTE PAS le contenu. Réagis de façon neutre et relance.
-8-15 mots, pas de guillemets."""
-    elif is_english:
-        prompt = f"""{p}
-{match_name} wrote in English: "{last_msg}"
-Conversation:\n{formatted}
-Reply IN ENGLISH, same chill tone. Short, casual, end with a question.
-6-18 words, no quotes."""
-    elif short_reply and not he_asked_cava:
-        prompt = f"""{p}
-{match_name} a répondu court: "{last_msg}"
-Historique:\n{formatted}
-NE PAS redemander "et toi ?". PIVOTE vers autre chose.
-6-14 mots, pas de guillemets."""
+Il a DÉJÀ répondu. NE REDEMANDE PAS "et toi ?". PIVOTE vers autre chose.
+6-12 mots, pas de guillemets."""
     elif he_asked_cava:
         prompt = f"""{p}
-{match_name} demande comment tu vas: "{last_msg}"
+{match_name} demande comment tu vas: "{last_their_msg}"
 Historique:\n{formatted}
-[réponse courte] + question. JAMAIS finir par "ça va bien merci" seul.
-6-15 mots, pas de guillemets."""
-    elif is_greeting_only and is_first_message:
+Réponds PUIS relance. JAMAIS "ça va bien merci" seul.
+6-15 mots, 1 emoji max, pas de guillemets."""
+    elif is_simple_greeting:
         prompt = f"""{p}
-{match_name}: "{last_msg}" (premier message)
-Réponds chill, courte, pose une question ouverte.
-8-14 mots, pas de guillemets."""
+{match_name} te dit bonjour: "{last_their_msg}"
+Style détaché mais accessible. Court.
+4-8 mots max, pas de guillemets."""
+    elif he_gave_his_pseudo:
+        prompt = f"""{p}
+{match_name} vient de donner son pseudo en réponse à ta demande.
+Historique:\n{formatted}
+Réponds en confirmant que tu vas l'ajouter ET donne TON pseudo {username} sur lntsa.
+OBLIGATOIRE : mentionner "lntsa" ET "{username}" dans le message.
+12-18 mots, PAS de guillemets."""
     elif he_proposes_insta:
         prompt = f"""{p}
-{match_name} propose Instagram: "{last_msg}"
+{match_name} te propose Instagram ou donne son pseudo. PARFAIT !
 Historique:\n{formatted}
-Accepte avec enthousiasme. Donne ton pseudo {username} sans @.
-8-15 mots, écris "lntsa", pas de guillemets."""
+Réponds en donnant TON pseudo {username} directement.
+OBLIGATOIRE : écrire "{username}" ET "lntsa" dans le message.
+8-15 mots, PAS de guillemets."""
     elif he_proposes_snap:
         prompt = f"""{p}
-{match_name} propose Snap: "{last_msg}"
+{match_name} demande ton snap: "{last_their_msg}"
 Historique:\n{formatted}
-REFUSE snap. Propose lntsa UNIQUEMENT: "t'as lntsa ? moi c'est {username}".
-12-22 mots, écris "lntsa", pas de guillemets."""
+REFUSE snap. Propose lntsa : "t'as lntsa ? moi c'est {username}".
+12-25 mots, écris "lntsa", pas de guillemets."""
     elif he_proposes_social:
         prompt = f"""{p}
-{match_name} propose un autre moyen: "{last_msg}"
+{match_name} propose WhatsApp/numéro: "{last_their_msg}"
 Historique:\n{formatted}
-REFUSE. Propose lntsa UNIQUEMENT. Donne {username} sans @.
-12-22 mots, écris "lntsa", pas de guillemets."""
+REFUSE. Propose lntsa UNIQUEMENT : "t'as lntsa ? moi c'est {username}".
+15-25 mots, écris "lntsa", pas de guillemets."""
+    elif is_skeptical:
+        prompt = f"""{p}
+{match_name} semble méfiant: "{last_their_msg}"
+Historique:\n{formatted}
+Rassure avec humour. Ne mentionne PAS lntsa.
+15-25 mots, pas de guillemets."""
     elif is_direct and total_exchanges >= 8:
         prompt = f"""{p}
-{match_name} propose de se voir: "{last_msg}"
+{match_name} propose un date: "{last_their_msg}"
 Historique:\n{formatted}
-Dis OUI. Explique qu'il faut organiser ailleurs. Propose lntsa ({username}).
-22-35 mots, écris "lntsa", pas de guillemets."""
-    elif is_compliment:
+Dis OUI, explique qu'il faut s'organiser ailleurs, propose lntsa ({username}).
+22-38 mots, écris "lntsa", pas de guillemets."""
+    elif is_compliment or is_flirty:
         prompt = f"""{p}
-{match_name} te fait un compliment: "{last_msg}"
+{match_name} te fait un compliment: "{last_their_msg}"
 Historique:\n{formatted}
-Réagis puis RELANCE avec une question.
-8-18 mots, pas de guillemets."""
+Réagis au compliment puis RELANCE avec une question.
+8-18 mots, 1 emoji max, pas de guillemets."""
     elif he_asked_location:
         prompt = f"""{p}
-{match_name} demande ta localisation: "{last_msg}"
+{match_name} demande ta localisation: "{last_their_msg}"
 Historique:\n{formatted}
-ESQUIVE avec humour. JAMAIS de ville/lieu/adresse.
-8-18 mots, pas de guillemets."""
+NE DONNE JAMAIS de lieu. Esquive avec humour.
+10-20 mots, pas de guillemets."""
     elif he_asked_job:
         prompt = f"""{p}
-{match_name} demande ton job: "{last_msg}"
+{match_name} demande ton job: "{last_their_msg}"
 Historique:\n{formatted}
-Réponds brièvement (étudiante en comm) et retourne la question.
+Réponds (étudiante en comm) et retourne la question.
 10-18 mots, pas de guillemets."""
     elif he_asked_et_toi:
         prompt = f"""{p}
-{match_name}: "{last_msg}"
+{match_name} dit "et toi ?": "{last_their_msg}"
 Historique:\n{formatted}
-RÉPONDS à ce qu'il a dit puis RELANCE.
+RÉPONDS à la question puis RELANCE. Finis par une question.
 10-18 mots, pas de guillemets."""
-    elif is_confusion:
+    elif he_is_confused:
         prompt = f"""{p}
-{match_name} comprend pas: "{last_msg}"
+{match_name} comprend pas: "{last_their_msg}"
 Historique:\n{formatted}
-Reformule ou invite-le à continuer. Reste chill.
+Reformule ou invite-le à continuer.
 8-15 mots, pas de guillemets."""
+    elif q_already_answered:
+        prompt = f"""{p}
+{match_name} repose une question déjà répondue: "{last_their_msg}"
+Historique:\n{formatted}
+Rappelle brièvement et PIVOTE.
+10-18 mots, pas de guillemets."""
     elif should_soft_hint:
         prompt = f"""{p}
-Conversation avec {match_name}. Planter la graine (sans mentionner lntsa).
-Son message: "{last_msg}"
+Conversation avec {match_name}. Plante la graine (sans mentionner lntsa).
+Son message: "{last_their_msg}"
 Historique:\n{formatted}
-Réagis à son message PUIS ajoute UNE phrase douce avec "par contre", "sinon" ou "au fait".
-Ton DOUX. INTERDIT: lntsa, insta, pseudo.
-15-28 mots, pas de guillemets."""
+Réagis PUIS glisse "par contre"/"sinon"/"au fait" + phrase douce sur tinder/notifs.
+INTERDIT: lntsa, insta, pseudo. 15-25 mots."""
     elif should_redirect:
         prompt = f"""{p}
-Conversation avec {match_name}. La graine a été plantée, propose maintenant lntsa.
-Son message: "{last_msg}"
+Conversation avec {match_name}. Graine plantée, propose maintenant lntsa.
+Son message: "{last_their_msg}"
 Historique:\n{formatted}
-[réagir à son message] + "t'as lntsa ? moi c'est {username}".
-20-30 mots, écris "lntsa", pas de guillemets."""
+[réagir au message] + "t'as lntsa ? moi c'est {username}".
+20-35 mots, écris "lntsa", pas de guillemets."""
     else:
         prompt = f"""{p}
 Historique:\n{formatted}
-Il dit: "{last_msg}"
+Il dit: "{last_their_msg}"
 Réponds DÉCONTRACTÉ, NATUREL. Finis TOUJOURS par une question.
-8-18 mots, pas de guillemets."""
+6-15 mots, pas de guillemets, 1 emoji max ou pas."""
 
     if len(their_messages) == 1:
         prompt += "\n\n⚠️ PREMIER MESSAGE: finir OBLIGATOIREMENT par une question ouverte."
 
-    return _call_openai(prompt, max_tokens=150)
+    return _call_openai(prompt, max_tokens=100)
+
 
 # ============================================================
 # AUTOMATION SCHEDULER
 # ============================================================
 
-automation_jobs = {}
+automation_jobs    = {}
 automation_threads = {}
 
 def run_automation_task(task_id, task, user_id):
@@ -866,42 +996,38 @@ def run_automation_task(task_id, task, user_id):
 
     interval_sec = int(task.get('interval_minutes', 30)) * 60
     task_type = task.get('type', 'massdm')
-    parallel = task.get('parallel', False)
+    parallel  = task.get('parallel', False)
 
     log(f"⚡ Tâche démarrée — {task_type} toutes les {task.get('interval_minutes')}min")
 
     while automation_jobs.get(task_id, {}).get('status') == 'running':
         next_run = time.time() + interval_sec
-        automation_jobs[task_id]['next_run'] = next_run
+        automation_jobs[task_id]['next_run']     = next_run
         automation_jobs[task_id]['next_run_str'] = datetime.datetime.fromtimestamp(next_run).strftime('%H:%M:%S')
-
         log(f"🔁 Exécution cycle — {task_type}")
 
         try:
-            job_id = str(uuid.uuid4())[:8]
+            job_id      = str(uuid.uuid4())[:8]
             account_ids = []
 
             if task_type in ('massdm', 'chatting'):
                 username       = task.get('username', '')
                 social_network = task.get('social_network', 'Instagram')
                 mode           = task_type
-                t = threading.Thread(
-                    target=run_mass_dm,
-                    args=(job_id, account_ids, username, social_network, mode, user_id),
-                    daemon=True
-                )
+                t = threading.Thread(target=run_mass_dm,
+                    args=(job_id, account_ids, username, social_network, mode, user_id), daemon=True)
                 t.start()
                 while t.is_alive():
-                    if automation_jobs.get(task_id, {}).get('status') != 'running':
-                        break
-                    job_logs = dm_progress.get(job_id, {}).get('log', [])
+                    if automation_jobs.get(task_id, {}).get('status') != 'running': break
+                    job_logs      = dm_progress.get(job_id, {}).get('log', [])
                     already_synced = automation_jobs[task_id].get('_dm_synced', 0)
                     for entry in job_logs[already_synced:]:
-                        automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
+                        automation_jobs[task_id]['log'].append(
+                            f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
                     automation_jobs[task_id]['_dm_synced'] = len(job_logs)
                     time.sleep(1)
                 t.join()
-                sent = dm_progress.get(job_id, {}).get('total_sent', 0)
+                sent    = dm_progress.get(job_id, {}).get('total_sent', 0)
                 skipped = dm_progress.get(job_id, {}).get('total_skipped', 0)
                 log(f"✅ Cycle terminé — {sent} envoyés, {skipped} ignorés")
 
@@ -909,23 +1035,20 @@ def run_automation_task(task_id, task, user_id):
                 swipe_count = int(task.get('swipe_count', 50))
                 like_pct    = int(task.get('like_pct', 80))
                 mode        = 'forcematch' if task_type == 'forcematch' else 'basic'
-                t = threading.Thread(
-                    target=run_auto_swipe,
-                    args=(job_id, account_ids, swipe_count, like_pct, mode, user_id, parallel),
-                    daemon=True
-                )
+                t = threading.Thread(target=run_auto_swipe,
+                    args=(job_id, account_ids, swipe_count, like_pct, mode, user_id, parallel), daemon=True)
                 t.start()
                 while t.is_alive():
-                    if automation_jobs.get(task_id, {}).get('status') != 'running':
-                        break
-                    job_logs = swipe_progress.get(job_id, {}).get('log', [])
+                    if automation_jobs.get(task_id, {}).get('status') != 'running': break
+                    job_logs       = swipe_progress.get(job_id, {}).get('log', [])
                     already_synced = automation_jobs[task_id].get('_sw_synced', 0)
                     for entry in job_logs[already_synced:]:
-                        automation_jobs[task_id]['log'].append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
+                        automation_jobs[task_id]['log'].append(
+                            f"[{datetime.datetime.now().strftime('%H:%M:%S')}]   {entry}")
                     automation_jobs[task_id]['_sw_synced'] = len(job_logs)
                     time.sleep(1)
                 t.join()
-                likes = swipe_progress.get(job_id, {}).get('total_likes', 0)
+                likes   = swipe_progress.get(job_id, {}).get('total_likes', 0)
                 matches = swipe_progress.get(job_id, {}).get('total_matches', 0)
                 log(f"✅ Cycle terminé — {likes} likes, {matches} matchs")
 
@@ -936,8 +1059,7 @@ def run_automation_task(task_id, task, user_id):
         log(f"⏳ Prochain cycle dans {task.get('interval_minutes')}min")
         elapsed = 0
         while elapsed < interval_sec:
-            if automation_jobs.get(task_id, {}).get('status') != 'running':
-                break
+            if automation_jobs.get(task_id, {}).get('status') != 'running': break
             time.sleep(5)
             elapsed += 5
 
@@ -945,24 +1067,19 @@ def run_automation_task(task_id, task, user_id):
     log("🛑 Tâche arrêtée")
 
 match_count_cache = {}
-swipe_progress = {}
+swipe_progress    = {}
 
 def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, parallel=False):
     accounts = load_accounts(user_id)
     accounts = [a for a in accounts if a['user_id'] in account_ids] if account_ids else accounts
-    proxies = get_proxies(user_id)
 
     swipe_progress[job_id] = {
         'status': 'running',
         'total_accounts': len(accounts),
         'completed_accounts': 0,
-        'total_likes': 0,
-        'total_dislikes': 0,
-        'total_matches': 0,
-        'total_failed': 0,
-        'accounts': [],
-        'log': [],
-        'parallel': parallel,
+        'total_likes': 0, 'total_dislikes': 0,
+        'total_matches': 0, 'total_failed': 0,
+        'accounts': [], 'log': [], 'parallel': parallel,
     }
 
     lock = threading.Lock()
@@ -971,17 +1088,42 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
         with lock:
             swipe_progress[job_id]['log'].append(msg)
 
+    def mark_banned(account):
+        with lock:
+            all_accs = load_accounts(user_id)
+            for a in all_accs:
+                if a['user_id'] == account['user_id']:
+                    a['_alive'] = False
+            save_accounts(all_accs, user_id)
+
     def process_account(account):
-        log(f"▶ Démarrage {account['name']}...")
+        proxies = get_proxies_for_account(account, user_id)
+        proxy_label = (f"[proxy: {account.get('proxy_url','global')[:30]}...]"
+                       if account.get('proxy_enabled') and account.get('proxy_url')
+                       else "[proxy: global]" if proxies else "[no proxy]")
+        log(f"▶ Démarrage {account['name']} {proxy_label}")
+        real_ip = get_current_ip(proxies)
+        if real_ip:
+            log(f"  🌐 IP réelle : {real_ip} {'✅ proxy actif' if proxies else '⚠️ pas de proxy'}")
+        else:
+            log(f"  ❌ IP non vérifiable — proxy injoignable ?")
         tinder_init_session(account, proxies)
         time.sleep(random.uniform(1, 2))
         wly = tinder_get_fast_match_count(account, proxies).get('count', 0)
 
+        likes = dislikes = matches = failed = 0
+
         if mode == 'forcematch':
-            likes = dislikes = matches = failed = 0
             for cycle in range(1, swipe_count + 1):
                 discover = tinder_get_profiles(account, 2, proxies)
-                if not discover['success'] or len(discover['profiles']) < 2:
+                if not discover['success']:
+                    if discover.get('error') == 'BANNED':
+                        log(f"  🚫 {account['name']} — COMPTE BANNI / TOKEN EXPIRÉ !")
+                        mark_banned(account)
+                        break
+                    failed += 1
+                    continue
+                if len(discover['profiles']) < 2:
                     failed += 1
                     continue
                 p = discover['profiles']
@@ -1003,8 +1145,13 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
                 log(f"  {account['name']} — cycle {cycle}/{swipe_count}")
         else:
             discover = tinder_get_profiles(account, swipe_count, proxies)
-            likes = dislikes = matches = failed = 0
-            if discover['success']:
+            if not discover['success']:
+                if discover.get('error') == 'BANNED':
+                    log(f"  🚫 {account['name']} — COMPTE BANNI / TOKEN EXPIRÉ !")
+                    mark_banned(account)
+                else:
+                    failed = swipe_count
+            else:
                 for profile in discover['profiles']:
                     tid = profile.get('_id')
                     if not tid:
@@ -1023,10 +1170,9 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
                         else: failed += 1
                     time.sleep(random.uniform(1.3, 3.4))
                     log(f"  {account['name']} — {likes+dislikes}/{swipe_count}")
-            else:
-                failed = swipe_count
 
-        acc_result = {'name': account['name'], 'wly': wly, 'likes': likes, 'dislikes': dislikes, 'matches': matches, 'failed': failed}
+        acc_result = {'name': account['name'], 'wly': wly,
+                      'likes': likes, 'dislikes': dislikes, 'matches': matches, 'failed': failed}
         with lock:
             swipe_progress[job_id]['accounts'].append(acc_result)
             swipe_progress[job_id]['total_likes']    += likes
@@ -1066,33 +1212,36 @@ dm_progress = {}
 def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
     accounts = load_accounts(user_id)
     accounts = [a for a in accounts if a['user_id'] in account_ids] if account_ids else accounts
-    proxies = get_proxies(user_id)
 
     dm_progress[job_id] = {
         'status': 'running',
-        'total_accounts': len(accounts),
-        'completed_accounts': 0,
-        'total_sent': 0,
-        'total_replies': 0,
-        'total_cta': 0,
-        'total_skipped': 0,
-        'total_failed': 0,
-        'accounts': [],
-        'log': []
+        'total_accounts': len(accounts), 'completed_accounts': 0,
+        'total_sent': 0, 'total_replies': 0, 'total_cta': 0,
+        'total_skipped': 0, 'total_failed': 0,
+        'accounts': [], 'log': []
     }
 
     fallback_messages = [
-        f"Coucou, ça va ?",
-        f"Hey ! Comment tu vas ?",
-        f"Salut 😊",
-        f"Cc ! Tu vas bien ?",
+        "Coucou, ça va ?",
+        "Hey ! Comment tu vas ?",
+        "Salut 😊",
+        "Cc ! Tu vas bien ?",
     ]
 
     def log(msg):
         dm_progress[job_id]['log'].append(msg)
 
     for account in accounts:
-        log(f"▶ Compte : {account['name']}")
+        proxies = get_proxies_for_account(account, user_id)
+        proxy_label = (f"[proxy: {account.get('proxy_url','')[:25]}...]"
+                       if account.get('proxy_enabled') and account.get('proxy_url')
+                       else "[proxy: global]" if proxies else "[no proxy]")
+        log(f"▶ Compte : {account['name']} {proxy_label}")
+        real_ip = get_current_ip(proxies)
+        if real_ip:
+            log(f"  🌐 IP réelle : {real_ip} {'✅ proxy actif' if proxies else '⚠️ pas de proxy'}")
+        else:
+            log(f"  ❌ IP non vérifiable — proxy injoignable ?")
         tinder_init_session(account, proxies)
         time.sleep(random.uniform(1, 2))
 
@@ -1107,9 +1256,7 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                     all_matches.append(c)
                     seen.add(c['_id'])
 
-        sent = skipped = failed = 0
-        replies = 0
-        cta = 0
+        sent = skipped = failed = replies = cta = 0
 
         for match in all_matches:
             match_id   = match.get('_id')
@@ -1120,22 +1267,22 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                 failed += 1
                 continue
 
-            hist_r    = tinder_get_messages(account, match_id, proxies)
-            messages  = hist_r.get('messages', [])
+            hist_r   = tinder_get_messages(account, match_id, proxies)
+            messages = hist_r.get('messages', [])
 
-            last_sender = None
-            has_their_reply = False
+            last_sender      = None
+            has_their_reply  = False
             conversation_history = []
 
             for msg in messages:
                 sender_id = msg.get('from', '')
-                text = msg.get('message', '')
+                text      = msg.get('message', '')
                 if sender_id == account['user_id']:
                     sender_label = 'NOUS'
-                    last_sender = 'NOUS'
+                    last_sender  = 'NOUS'
                 else:
-                    sender_label = match_name
-                    last_sender = match_name
+                    sender_label    = match_name
+                    last_sender     = match_name
                     has_their_reply = True
                 conversation_history.append({'sender': sender_label, 'text': text})
 
@@ -1152,22 +1299,26 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 
             if last_sender == 'NOUS':
                 skipped += 1
-                log(f"  ⏭ {match_name} — en attente de réponse, on skip")
+                log(f"  ⏭ {match_name} — dernier msg = nous, on attend sa réponse")
                 continue
 
-            if has_message_sent(user_id, account['user_id'], match_id) and not has_their_reply:
+            if not conversation_history and has_message_sent(user_id, account['user_id'], match_id):
                 skipped += 1
                 log(f"  ⏭ {match_name} — déjà contacté, pas de réponse")
                 continue
 
-            if mode == 'chatting' and conversation_history:
+            if mode == 'chatting':
                 log(f"  🤖 Génération IA en cours...")
                 msg_text = generate_ai_reply(conversation_history, match_name, match_bio, username, social_network)
+                if msg_text == "__CTA_SENT__":
+                    skipped += 1
+                    log(f"  ⏭ {match_name} — CTA déjà envoyé, on attend")
+                    continue
                 if msg_text:
                     log(f"  🤖 IA → \"{msg_text}\"")
                 else:
                     msg_text = random.choice(fallback_messages)
-                    log(f"  🤖 Fallback → \"{msg_text}\"")
+                    log(f"  ⚠️ IA échouée → Fallback: \"{msg_text}\"")
             elif mode == 'massdm':
                 msg_text = random.choice([
                     f"Coucou, ton profil m'a fait sourire haha ! Je suis plus sur {social_network}, cherche {username} si tu veux qu'on parle 😊",
@@ -1191,11 +1342,12 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 
             time.sleep(random.uniform(2, 5))
 
-        acc_result = {'name': account['name'], 'sent': sent, 'skipped': skipped, 'failed': failed, 'replies': replies, 'cta': cta}
+        acc_result = {'name': account['name'], 'sent': sent, 'skipped': skipped,
+                      'failed': failed, 'replies': replies, 'cta': cta}
         dm_progress[job_id]['accounts'].append(acc_result)
         dm_progress[job_id]['total_sent']    += sent
-        dm_progress[job_id]['total_replies'] = dm_progress[job_id].get('total_replies', 0) + replies
-        dm_progress[job_id]['total_cta']     = dm_progress[job_id].get('total_cta', 0) + cta
+        dm_progress[job_id]['total_replies']  = dm_progress[job_id].get('total_replies', 0) + replies
+        dm_progress[job_id]['total_cta']      = dm_progress[job_id].get('total_cta', 0) + cta
         dm_progress[job_id]['total_skipped'] += skipped
         dm_progress[job_id]['total_failed']  += failed
         dm_progress[job_id]['completed_accounts'] += 1
@@ -1212,6 +1364,64 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 # ROUTES API
 # ============================================================
 
+# ── PROXY POOL ──
+
+@app.route('/api/proxy-pool', methods=['GET'])
+@require_auth
+def get_proxy_pool():
+    pool = load_proxy_pool(current_user_id())
+    return jsonify({'success': True, 'pool': pool, 'count': len(pool)})
+
+@app.route('/api/proxy-pool', methods=['POST'])
+@require_auth
+def set_proxy_pool():
+    data = request.json or {}
+    raw_list = data.get('proxies', [])
+    cleaned = []
+    for p in raw_list:
+        p = p.strip()
+        if not p:
+            continue
+        if not (p.startswith('http') or p.startswith('socks')):
+            if '@' in p:
+                p = f'socks5://{p}'
+        if p:
+            cleaned.append(p)
+    save_proxy_pool(cleaned, current_user_id())
+    return jsonify({'success': True, 'count': len(cleaned)})
+
+@app.route('/api/proxy-pool/pop', methods=['POST'])
+@require_auth
+def pop_proxy():
+    proxy = pop_proxy_from_pool(current_user_id())
+    if not proxy:
+        return jsonify({'success': False, 'error': 'Pool vide'})
+    return jsonify({'success': True, 'proxy': proxy})
+
+@app.route('/api/proxy-pool/add', methods=['POST'])
+@require_auth
+def add_to_proxy_pool():
+    data = request.json or {}
+    new_proxies = data.get('proxies', [])
+    pool = load_proxy_pool(current_user_id())
+    for p in new_proxies:
+        p = p.strip()
+        if not p:
+            continue
+        if not (p.startswith('http') or p.startswith('socks')):
+            if '@' in p:
+                p = f'socks5://{p}'
+        if p and p not in pool:
+            pool.append(p)
+    save_proxy_pool(pool, current_user_id())
+    return jsonify({'success': True, 'count': len(pool)})
+
+@app.route('/api/proxy-pool/clear', methods=['POST'])
+@require_auth
+def clear_proxy_pool():
+    save_proxy_pool([], current_user_id())
+    return jsonify({'success': True})
+
 # ── AUTH ──
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -1223,34 +1433,34 @@ def login():
     for uid, u in users.items():
         if u['username'] == username and u['password'] == hash_password(password):
             token = generate_token()
-            active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role']}
+            _set_token(token, {'user_id': uid, 'username': u['username'], 'role': u['role']})
             return jsonify({'success': True, 'token': token, 'username': u['username'], 'role': u['role']})
     return jsonify({'success': False, 'error': 'Identifiants incorrects'}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
     token = get_token_from_request()
-    if token in active_tokens:
-        del active_tokens[token]
+    _del_token(token)
     return jsonify({'success': True})
 
 @app.route('/api/auth/me', methods=['GET'])
 def me():
     token = get_token_from_request()
-    if not token or token not in active_tokens:
+    data  = _get_token(token)
+    if not token or not data:
         return jsonify({'success': False, 'authenticated': False})
-    u = active_tokens[token]
-    return jsonify({'success': True, 'authenticated': True, 'username': u.get('username'), 'role': u.get('role')})
+    return jsonify({'success': True, 'authenticated': True,
+                    'username': data.get('username'), 'role': data.get('role')})
 
 @app.route('/api/auth/change-password', methods=['POST'])
 @require_auth
 def change_password():
-    data = request.json or {}
+    data  = request.json or {}
     old_pw = data.get('old_password', '')
     new_pw = data.get('new_password', '')
     if not new_pw or len(new_pw) < 6:
         return jsonify({'success': False, 'error': 'Mot de passe trop court (min 6 chars)'}), 400
-    uid = current_user_data().get('user_id')
+    uid   = current_user_data().get('user_id')
     users = load_users()
     if users[uid]['password'] != hash_password(old_pw):
         return jsonify({'success': False, 'error': 'Ancien mot de passe incorrect'}), 403
@@ -1280,7 +1490,8 @@ def update_settings():
 @require_admin
 def admin_list_users():
     users = load_users()
-    safe = [{'id': u['id'], 'username': u['username'], 'role': u['role'], 'created_at': u.get('created_at')} for u in users.values()]
+    safe = [{'id': u['id'], 'username': u['username'], 'role': u['role'],
+             'created_at': u.get('created_at')} for u in users.values()]
     return jsonify({'success': True, 'users': safe})
 
 @app.route('/api/admin/users', methods=['POST'])
@@ -1289,7 +1500,7 @@ def admin_create_user():
     data = request.json or {}
     username = data.get('username', '').strip()
     password = data.get('password', '')
-    role = data.get('role', 'user')
+    role     = data.get('role', 'user')
     if not username or not password:
         return jsonify({'success': False, 'error': 'Username et password requis'}), 400
     if len(password) < 6:
@@ -1300,7 +1511,8 @@ def admin_create_user():
     if any(u['username'] == username for u in users.values()):
         return jsonify({'success': False, 'error': 'Username déjà pris'}), 409
     uid = str(uuid.uuid4())
-    users[uid] = {'id': uid, 'username': username, 'password': hash_password(password), 'role': role, 'created_at': time.time()}
+    users[uid] = {'id': uid, 'username': username, 'password': hash_password(password),
+                  'role': role, 'created_at': time.time()}
     save_users(users)
     return jsonify({'success': True, 'id': uid, 'username': username, 'role': role})
 
@@ -1319,7 +1531,7 @@ def admin_delete_user(user_id):
 @app.route('/api/admin/users/<user_id>/reset-password', methods=['POST'])
 @require_admin
 def admin_reset_password(user_id):
-    data = request.json or {}
+    data   = request.json or {}
     new_pw = data.get('password', '')
     if not new_pw or len(new_pw) < 6:
         return jsonify({'success': False, 'error': 'Password min 6 chars'}), 400
@@ -1335,7 +1547,7 @@ def admin_reset_password(user_id):
 @app.route('/api/stats', methods=['GET'])
 @require_auth
 def get_stats():
-    stats = load_stats(current_user_id())
+    stats    = load_stats(current_user_id())
     accounts = load_accounts(current_user_id())
     stats['accounts'] = len(accounts)
     return jsonify({'success': True, 'stats': stats})
@@ -1349,20 +1561,15 @@ def reset_stats():
 @app.route('/api/stats/history', methods=['GET'])
 @require_auth
 def get_stats_history():
-    history = load_stats_history(current_user_id())
-    return jsonify({'success': True, 'history': history})
+    return jsonify({'success': True, 'history': load_stats_history(current_user_id())})
 
 @app.route('/api/stats/alltime', methods=['GET'])
 @require_auth
 def get_stats_alltime():
     history = load_stats_history(current_user_id())
-    total = {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0}
+    total   = {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0}
     for e in history:
-        total['swipes']   += e.get('swipes', 0)
-        total['messages'] += e.get('messages', 0)
-        total['matches']  += e.get('matches', 0)
-        total['replies']  += e.get('replies', 0)
-        total['cta_sent'] += e.get('cta_sent', 0)
+        for k in total: total[k] += e.get(k, 0)
     return jsonify({'success': True, 'alltime': total, 'days': len(history)})
 
 # ── ACCOUNTS ──
@@ -1371,34 +1578,41 @@ def get_stats_alltime():
 @require_auth
 def get_accounts():
     accounts = load_accounts(current_user_id())
-    safe = []
-    for a in accounts:
-        safe.append({
-            'user_id': a.get('user_id'),
-            'name': a.get('name'),
-            'has_refresh': bool(a.get('refresh_token')),
-            'tinder_version': a.get('tinder_version', '17.3.0'),
-            'bio': a.get('bio', ''),
-            'photo': a.get('photo', ''),
-            'age': a.get('age', ''),
-            'tags': a.get('tags', []),
-            'total_likes': a.get('total_likes'),
-            'total_matches': a.get('total_matches'),
-            'cached_match_count': a.get('cached_match_count'),
-            'added_at': a.get('added_at', ''),
-            '_alive': a.get('_alive'),
-        })
+    safe = [{
+        'user_id': a.get('user_id'),
+        'name': a.get('name'),
+        'has_refresh': bool(a.get('refresh_token')),
+        'tinder_version': a.get('tinder_version', '17.3.0'),
+        'bio': a.get('bio', ''),
+        'photo': a.get('photo', ''),
+        'age': a.get('age', ''),
+        'tags': a.get('tags', []),
+        'total_likes': a.get('total_likes'),
+        'total_matches': a.get('total_matches'),
+        'cached_match_count': a.get('cached_match_count'),
+        'added_at': a.get('added_at', ''),
+        '_alive': a.get('_alive'),
+        'proxy_enabled': a.get('proxy_enabled', False),
+        'proxy_url': a.get('proxy_url', ''),
+    } for a in accounts]
     return jsonify({'success': True, 'accounts': safe})
 
 @app.route('/api/accounts', methods=['POST'])
 @require_auth
 def add_account():
-    data = request.json
+    data     = request.json
     required = ['token', 'persistent_device_id', 'device_id']
     if not all(k in data for k in required):
         return jsonify({'success': False, 'error': 'Champs requis: token, persistent_device_id, device_id'}), 400
 
-    proxies = get_proxies(current_user_id())
+    account_proxy_url     = data.get('proxy_url', '').strip()
+    account_proxy_enabled = bool(data.get('proxy_enabled', False)) and bool(account_proxy_url)
+
+    if account_proxy_enabled and account_proxy_url:
+        check_proxies = {'http': account_proxy_url, 'https': account_proxy_url}
+    else:
+        check_proxies = get_proxies(current_user_id())
+
     temp_account = {
         'token': data['token'],
         'persistent_device_id': data['persistent_device_id'],
@@ -1411,7 +1625,7 @@ def add_account():
         'longitude': data.get('longitude', 2.3522),
     }
 
-    result = tinder_check_token(temp_account, proxies)
+    result = tinder_check_token(temp_account, check_proxies)
     if not result['valid']:
         return jsonify({'success': False, 'error': result['error']}), 400
 
@@ -1425,6 +1639,8 @@ def add_account():
         'tags': data.get('tags', []),
         'added_at': time.strftime('%Y-%m-%d %H:%M:%S'),
         '_alive': True,
+        'proxy_enabled': account_proxy_enabled,
+        'proxy_url': account_proxy_url,
     }
     if data.get('refresh_token'):
         account['refresh_token'] = data['refresh_token']
@@ -1440,9 +1656,9 @@ def add_account():
 @app.route('/api/accounts/<user_id>', methods=['DELETE'])
 @require_auth
 def delete_account(user_id):
-    accounts = load_accounts(current_user_id())
+    accounts       = load_accounts(current_user_id())
     original_count = len(accounts)
-    accounts = [a for a in accounts if a['user_id'] != user_id]
+    accounts       = [a for a in accounts if a['user_id'] != user_id]
     if len(accounts) == original_count:
         return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
     save_accounts(accounts, current_user_id())
@@ -1451,7 +1667,7 @@ def delete_account(user_id):
 @app.route('/api/accounts/<user_id>/tags', methods=['POST'])
 @require_auth
 def update_account_tags(user_id):
-    tags = request.json.get('tags', [])
+    tags     = request.json.get('tags', [])
     accounts = load_accounts(current_user_id())
     for a in accounts:
         if a['user_id'] == user_id:
@@ -1459,16 +1675,49 @@ def update_account_tags(user_id):
     save_accounts(accounts, current_user_id())
     return jsonify({'success': True})
 
+@app.route('/api/accounts/<user_id>/proxy', methods=['POST'])
+@require_auth
+def update_account_proxy(user_id):
+    data      = request.json or {}
+    proxy_url = data.get('proxy_url', '').strip()
+    enabled   = bool(data.get('proxy_enabled', False)) and bool(proxy_url)
+    accounts  = load_accounts(current_user_id())
+    account   = next((a for a in accounts if a['user_id'] == user_id), None)
+    if not account:
+        return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
+    account['proxy_url']     = proxy_url
+    account['proxy_enabled'] = enabled
+    save_accounts(accounts, current_user_id())
+    return jsonify({'success': True, 'proxy_enabled': enabled, 'proxy_url': proxy_url})
+
+@app.route('/api/accounts/<user_id>/proxy/test', methods=['GET', 'POST'])
+@require_auth
+def test_account_proxy(user_id):
+    accounts = load_accounts(current_user_id())
+    account  = next((a for a in accounts if a['user_id'] == user_id), None)
+    if not account:
+        return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
+    data     = request.json or {}
+    test_url = data.get('proxy_url', '').strip()
+    if test_url:
+        proxies = {'http': test_url, 'https': test_url}
+        using_account_proxy = True
+    else:
+        proxies = get_proxies_for_account(account, current_user_id())
+        using_account_proxy = account.get('proxy_enabled', False) and bool(account.get('proxy_url'))
+    ip = get_current_ip(proxies)
+    return jsonify({'success': bool(ip), 'ip': ip, 'using_account_proxy': using_account_proxy})
+
 @app.route('/api/accounts/<user_id>/bio', methods=['POST'])
 @require_auth
 def update_bio(user_id):
-    bio = request.json.get('bio', '')
+    bio      = request.json.get('bio', '')
     accounts = load_accounts(current_user_id())
-    account = next((a for a in accounts if a['user_id'] == user_id), None)
+    account  = next((a for a in accounts if a['user_id'] == user_id), None)
     if not account:
         return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
-    proxies = get_proxies(current_user_id())
-    result = tinder_update_bio(account, bio, proxies)
+    proxies = get_proxies_for_account(account, current_user_id())
+    result  = tinder_update_bio(account, bio, proxies)
     if result['success']:
         for a in accounts:
             if a['user_id'] == user_id:
@@ -1479,42 +1728,39 @@ def update_bio(user_id):
 @app.route('/api/accounts/check', methods=['POST'])
 @require_auth
 def check_tokens():
-    accounts = load_accounts(current_user_id())
-    proxies = get_proxies(current_user_id())
-    results = []
-    settings = load_settings(current_user_id())
+    accounts    = load_accounts(current_user_id())
+    results     = []
+    settings    = load_settings(current_user_id())
     auto_delete = settings.get('auto_delete_dead', False)
-
     for account in accounts:
+        proxies = get_proxies_for_account(account, current_user_id())
         r = tinder_check_token(account, proxies)
         account['_alive'] = r['valid']
         results.append({'name': account['name'], 'user_id': account['user_id'], 'valid': r['valid']})
         if r['valid']:
-            account['bio']   = r.get('bio', account.get('bio', ''))
+            account['bio']   = r.get('bio',   account.get('bio', ''))
             account['photo'] = r.get('photo', account.get('photo', ''))
-            account['age']   = r.get('age', account.get('age', ''))
-
+            account['age']   = r.get('age',   account.get('age', ''))
     if auto_delete:
         dead_count = sum(1 for a in accounts if not a.get('_alive', True))
-        accounts = [a for a in accounts if a.get('_alive', True)]
+        accounts   = [a for a in accounts if a.get('_alive', True)]
         print(f"🗑 Auto-delete: {dead_count} compte(s) supprimé(s)")
-
     save_accounts(accounts, current_user_id())
     return jsonify({'success': True, 'results': results})
 
 @app.route('/api/accounts/match-counts', methods=['GET'])
 @require_auth
 def get_match_counts():
-    user_id = current_user_id()
-    accs = load_accounts(user_id)
-    proxies = get_proxies(user_id)
-    result = {}
+    user_id  = current_user_id()
+    accs     = load_accounts(user_id)
+    result   = {}
     for account in accs:
         try:
+            proxies = get_proxies_for_account(account, user_id)
             tinder_init_session(account, proxies)
             matches_r = tinder_get_matches(account, 100, proxies)
             convs_r   = tinder_get_conversations(account, 100, proxies)
-            all_ids = set()
+            all_ids   = set()
             if matches_r.get('success'):
                 for m in matches_r['matches']:
                     mid = m.get('_id')
@@ -1523,9 +1769,9 @@ def get_match_counts():
                 for c in convs_r['conversations']:
                     mid = c.get('_id')
                     if mid: all_ids.add(mid)
-            result[account['user_id']] = len(all_ids)
+            result[account['user_id']]    = len(all_ids)
             account['cached_match_count'] = len(all_ids)
-        except Exception as e:
+        except Exception:
             result[account['user_id']] = account.get('cached_match_count', 0)
     save_accounts(accs, user_id)
     return jsonify({'success': True, 'counts': result})
@@ -1540,8 +1786,8 @@ def get_tags():
 @app.route('/api/tags', methods=['POST'])
 @require_auth
 def create_tag():
-    data = request.json or {}
-    name = data.get('name', '').strip()
+    data  = request.json or {}
+    name  = data.get('name', '').strip()
     color = data.get('color', '#448aff')
     if not name:
         return jsonify({'success': False, 'error': 'Nom requis'}), 400
@@ -1560,7 +1806,7 @@ def update_tag(tag_id):
     tags = load_tags(current_user_id())
     for t in tags:
         if t['id'] == tag_id:
-            t['name'] = data.get('name', t['name']).strip()
+            t['name']  = data.get('name',  t['name']).strip()
             t['color'] = data.get('color', t['color'])
     save_tags(tags, current_user_id())
     return jsonify({'success': True})
@@ -1582,10 +1828,10 @@ def delete_tag(tag_id):
 @app.route('/api/automation', methods=['GET'])
 @require_auth
 def get_automation():
-    tasks = load_automation(current_user_id())
+    tasks  = load_automation(current_user_id())
     result = []
     for t in tasks:
-        tid = t['id']
+        tid  = t['id']
         live = automation_jobs.get(tid, {})
         result.append({**t, 'status': live.get('status', 'stopped'),
                        'next_run_str': live.get('next_run_str', '—'),
@@ -1618,7 +1864,7 @@ def create_automation():
 @require_auth
 def start_automation(task_id):
     tasks = load_automation(current_user_id())
-    task = next((t for t in tasks if t['id'] == task_id), None)
+    task  = next((t for t in tasks if t['id'] == task_id), None)
     if not task:
         return jsonify({'success': False, 'error': 'Tâche introuvable'}), 404
     if automation_jobs.get(task_id, {}).get('status') == 'running':
@@ -1659,19 +1905,16 @@ def automation_status(task_id):
 @app.route('/api/swipe/start', methods=['POST'])
 @require_auth
 def start_swipe():
-    data = request.json
-    job_id = str(uuid.uuid4())[:8]
+    data        = request.json
+    job_id      = str(uuid.uuid4())[:8]
     account_ids = data.get('account_ids', [])
-    swipe_count  = int(data.get('swipe_count', 50))
-    like_pct     = int(data.get('like_percentage', 80))
-    mode         = data.get('mode', 'basic')
-    parallel     = bool(data.get('parallel', False))
-    thread = threading.Thread(
-        target=run_auto_swipe,
+    swipe_count = int(data.get('swipe_count', 50))
+    like_pct    = int(data.get('like_percentage', 80))
+    mode        = data.get('mode', 'basic')
+    parallel    = bool(data.get('parallel', False))
+    threading.Thread(target=run_auto_swipe,
         args=(job_id, account_ids, swipe_count, like_pct, mode, current_user_id(), parallel),
-        daemon=True
-    )
-    thread.start()
+        daemon=True).start()
     return jsonify({'success': True, 'job_id': job_id})
 
 @app.route('/api/swipe/status/<job_id>', methods=['GET'])
@@ -1686,20 +1929,17 @@ def swipe_status(job_id):
 @app.route('/api/dm/start', methods=['POST'])
 @require_auth
 def start_dm():
-    data = request.json
-    job_id = str(uuid.uuid4())[:8]
+    data           = request.json
+    job_id         = str(uuid.uuid4())[:8]
     account_ids    = data.get('account_ids', [])
     username       = data.get('username', '')
     social_network = data.get('social_network', 'Instagram')
     mode           = data.get('mode', 'massdm')
     if not username:
         return jsonify({'success': False, 'error': 'Username requis'}), 400
-    thread = threading.Thread(
-        target=run_mass_dm,
+    threading.Thread(target=run_mass_dm,
         args=(job_id, account_ids, username, social_network, mode, current_user_id()),
-        daemon=True
-    )
-    thread.start()
+        daemon=True).start()
     return jsonify({'success': True, 'job_id': job_id})
 
 @app.route('/api/dm/status/<job_id>', methods=['GET'])
@@ -1709,7 +1949,7 @@ def dm_status(job_id):
         return jsonify({'success': False, 'error': 'Job introuvable'}), 404
     return jsonify({'success': True, **dm_progress[job_id]})
 
-# ── PROXY ──
+# ── PROXY GLOBAL ──
 
 @app.route('/api/proxy', methods=['GET'])
 @require_auth
@@ -1719,8 +1959,10 @@ def get_proxy():
 @app.route('/api/proxy', methods=['POST'])
 @require_auth
 def set_proxy():
-    data = request.json
-    config = {'enabled': data.get('enabled', False), 'proxy_url': data.get('proxy_url'), 'rotation_link': data.get('rotation_link')}
+    data   = request.json
+    config = {'enabled': data.get('enabled', False),
+              'proxy_url': data.get('proxy_url'),
+              'rotation_link': data.get('rotation_link')}
     save_proxy(config, current_user_id())
     return jsonify({'success': True})
 
@@ -1728,7 +1970,7 @@ def set_proxy():
 @require_auth
 def test_proxy():
     proxies = get_proxies(current_user_id())
-    ip = get_current_ip(proxies)
+    ip      = get_current_ip(proxies)
     return jsonify({'success': bool(ip), 'ip': ip})
 
 @app.route('/api/proxy/rotate', methods=['POST'])
@@ -1741,7 +1983,7 @@ def rotate_proxy():
         requests.get(cfg['rotation_link'], timeout=10, verify=False)
         time.sleep(3)
         proxies = get_proxies(current_user_id())
-        ip = get_current_ip(proxies)
+        ip      = get_current_ip(proxies)
         return jsonify({'success': True, 'new_ip': ip})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1751,10 +1993,10 @@ def rotate_proxy():
 @app.route('/api/matches', methods=['GET'])
 @require_auth
 def get_matches_list():
-    accounts = load_accounts(current_user_id())
-    proxies = get_proxies(current_user_id())
+    accounts    = load_accounts(current_user_id())
     all_matches = []
     for account in accounts:
+        proxies = get_proxies_for_account(account, current_user_id())
         r = tinder_get_matches(account, 30, proxies)
         if r['success']:
             for m in r['matches']:
@@ -1766,6 +2008,12 @@ def get_matches_list():
                     'last_message': (m.get('messages') or [{}])[-1].get('message', '') if m.get('messages') else '',
                 })
     return jsonify({'success': True, 'matches': all_matches})
+
+# ── HOME ──
+
+@app.route('/')
+def home():
+    return jsonify({'status': 'ok', 'message': 'Tinder Bot API running'})
 
 # ============================================================
 # RESET AUTO MINUIT
@@ -1781,12 +2029,13 @@ def check_and_reset_stats():
         all_data = {}
 
     changed = False
-    users = load_users()
+    users   = load_users()
     for uid in list(users.keys()) + ['default']:
-        data = all_data.get(uid, {})
+        data       = all_data.get(uid, {})
         last_reset = data.get('last_reset', None)
         if last_reset != today:
-            all_data[uid] = {'swipes': 0, 'messages': 0, 'matches': 0, 'replies': 0, 'cta_sent': 0, 'last_reset': today}
+            all_data[uid] = {'swipes': 0, 'messages': 0, 'matches': 0,
+                             'replies': 0, 'cta_sent': 0, 'last_reset': today}
             changed = True
 
     if changed:
