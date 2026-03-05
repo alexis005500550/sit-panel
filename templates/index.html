@@ -131,6 +131,48 @@
   .btn-sm { padding:6px 12px; font-size:12px; }
   .btn-full { width:100%; justify-content:center; }
 
+  .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; }
+  .profile-card { position:relative; border-radius:20px; overflow:hidden; aspect-ratio:3/4; cursor:pointer; box-shadow:0 8px 40px rgba(0,0,0,0.6); transition:transform 0.25s,box-shadow 0.25s; background:var(--surface2); }
+  .profile-card:hover { transform:translateY(-6px) scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.8); }
+  .profile-card.is-dead { border:2px solid rgba(255,58,94,0.6); box-shadow:0 0 24px rgba(255,58,94,0.25); }
+  .profile-card.is-dead .profile-card-bg { filter:grayscale(0.7) brightness(0.6); }
+  .profile-card-bg { position:absolute; inset:0; background-size:cover; background-position:center top; transition:transform 0.5s; }
+  .profile-card:hover .profile-card-bg { transform:scale(1.06); }
+  .profile-card-bg-placeholder { position:absolute; inset:0; background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); display:flex; align-items:center; justify-content:center; font-size:64px; }
+  .profile-card-gradient { position:absolute; inset:0; background:linear-gradient(to bottom,transparent 25%,rgba(0,0,0,0.25) 55%,rgba(0,0,0,0.95) 100%); }
+  .profile-card-status { position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:var(--muted); border:2px solid rgba(0,0,0,0.5); z-index:4; }
+  .profile-card-status.alive { background:var(--green); box-shadow:0 0 10px var(--green); animation:alivePulse 2.5s infinite; }
+  .profile-card-status.dead { background:var(--accent); box-shadow:0 0 12px rgba(255,58,94,0.8); width:14px; height:14px; border:2px solid rgba(255,58,94,0.6); }
+  @keyframes alivePulse { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 14px var(--green),0 0 20px rgba(0,230,118,0.4)} }
+  .profile-card-dead-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:11px; font-weight:700; color:rgba(255,80,80,0.95); background:rgba(0,0,0,0.8); border:1px solid rgba(255,58,94,0.5); padding:5px 12px; border-radius:20px; letter-spacing:1px; z-index:5; pointer-events:none; backdrop-filter:blur(4px); white-space:nowrap; }
+  .profile-card-refresh { position:absolute; top:14px; left:14px; font-size:10px; font-weight:600; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); border:1px solid rgba(0,230,118,0.3); color:var(--green); padding:3px 8px; border-radius:20px; z-index:4; }
+  .profile-card-proxy-badge { position:absolute; top:36px; left:14px; font-size:9px; font-weight:700; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); border:1px solid rgba(68,138,255,0.5); color:var(--blue); padding:3px 8px; border-radius:20px; z-index:4; display:flex; align-items:center; gap:4px; letter-spacing:0.4px; }
+  .profile-card-proxy-badge .proxy-dot { width:5px; height:5px; border-radius:50%; background:var(--blue); box-shadow:0 0 6px var(--blue); animation:alivePulse 2s infinite; }
+  .profile-card-body { position:absolute; bottom:0; left:0; right:0; padding:18px 16px 14px; z-index:3; }
+  .profile-card-name { font-size:22px; font-weight:700; color:#fff; line-height:1.1; letter-spacing:-0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.5); }
+  .profile-card-age { font-size:18px; font-weight:400; color:rgba(255,255,255,0.85); margin-left:6px; }
+  .profile-card-bio { font-size:12px; color:rgba(255,255,255,0.7); margin-top:6px; line-height:1.5; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+  .profile-card-actions { display:flex; gap:7px; margin-top:12px; }
+  .profile-card-btn { flex:1; padding:8px 6px; border-radius:50px; border:none; font-size:11px; font-weight:700; font-family:var(--font); cursor:pointer; transition:all 0.18s; backdrop-filter:blur(10px); }
+  .profile-card-btn:hover { transform:translateY(-1px); }
+  .profile-card-btn-bio { background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.25); }
+  .profile-card-btn-bio:hover { background:rgba(255,255,255,0.28); }
+  .profile-card-btn-proxy { background:rgba(68,138,255,0.2); color:var(--blue); border:1px solid rgba(68,138,255,0.4); flex:0 0 auto; padding:8px 10px; }
+  .profile-card-btn-proxy:hover { background:rgba(68,138,255,0.35); }
+  .profile-card-btn-proxy.active { background:rgba(68,138,255,0.35); border-color:rgba(68,138,255,0.7); box-shadow:0 0 12px rgba(68,138,255,0.4); }
+  .profile-card-btn-del { background:rgba(255,58,94,0.2); color:var(--accent); border:1px solid rgba(255,58,94,0.35); flex:0 0 auto; padding:8px 12px; }
+  .profile-card-btn-del:hover { background:rgba(255,58,94,0.4); }
+
+  .proxy-mode-toggle { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:16px; }
+  .proxy-mode-btn { flex:1; padding:8px; border-radius:7px; text-align:center; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:all 0.18s; border:none; background:none; font-family:var(--font); }
+  .proxy-mode-btn.active { background:linear-gradient(135deg,var(--blue),#2a6adf); color:white; box-shadow:0 4px 12px rgba(68,138,255,0.3); }
+  .proxy-ip-display { display:flex; align-items:center; gap:10px; padding:12px 14px; background:rgba(68,138,255,0.06); border:1px solid rgba(68,138,255,0.2); border-radius:10px; margin-top:10px; }
+  .proxy-ip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .proxy-ip-dot.ok { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .proxy-ip-dot.fail { background:var(--accent); }
+  .proxy-ip-text { font-family:var(--font-mono); font-size:12px; font-weight:600; }
+  .proxy-ip-label { font-size:11px; color:var(--muted); }
+
   .account-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; transition:all 0.15s; }
   .account-item:hover { border-color:rgba(255,58,94,0.4); transform:translateX(2px); }
   .account-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:white; flex-shrink:0; }
@@ -168,56 +210,12 @@
 
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(8px); }
   .modal-overlay.open { display:flex; }
-  .modal { background:var(--surface); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:28px; width:480px; max-width:95vw; animation:modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1); position:relative; box-shadow:0 32px 80px rgba(0,0,0,0.8); }
+  .modal { background:var(--surface); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:28px; width:480px; max-width:95vw; animation:modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1); position:relative; box-shadow:0 32px 80px rgba(0,0,0,0.8); max-height:90vh; overflow-y:auto; }
   .modal::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:60%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,58,94,0.5),transparent); }
   @keyframes modalIn { from{transform:scale(0.9) translateY(20px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
   .modal-title { font-size:15px; font-weight:600; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; }
   .modal-close { cursor:pointer; color:var(--muted); font-size:18px; background:none; border:none; line-height:1; transition:color 0.15s; padding:4px; }
   .modal-close:hover { color:var(--text); }
-
-  .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; }
-  .profile-card { position:relative; border-radius:20px; overflow:hidden; aspect-ratio:3/4; cursor:pointer; box-shadow:0 8px 40px rgba(0,0,0,0.6); transition:transform 0.25s,box-shadow 0.25s; background:var(--surface2); }
-  .profile-card:hover { transform:translateY(-6px) scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.8); }
-
-  /* DEAD ACCOUNT - pastille rouge + overlay */
-  .profile-card.is-dead { border:2px solid rgba(255,58,94,0.6); box-shadow:0 0 24px rgba(255,58,94,0.25); }
-  .profile-card.is-dead .profile-card-bg { filter:grayscale(0.7) brightness(0.6); }
-
-  .profile-card-bg { position:absolute; inset:0; background-size:cover; background-position:center top; transition:transform 0.5s; }
-  .profile-card:hover .profile-card-bg { transform:scale(1.06); }
-  .profile-card-bg-placeholder { position:absolute; inset:0; background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); display:flex; align-items:center; justify-content:center; font-size:64px; }
-  .profile-card-gradient { position:absolute; inset:0; background:linear-gradient(to bottom,transparent 25%,rgba(0,0,0,0.25) 55%,rgba(0,0,0,0.95) 100%); }
-
-  /* STATUS DOT - alive=vert, dead=rouge pastille */
-  .profile-card-status { position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:var(--muted); border:2px solid rgba(0,0,0,0.5); z-index:4; }
-  .profile-card-status.alive { background:var(--green); box-shadow:0 0 10px var(--green); animation:alivePulse 2.5s infinite; }
-  .profile-card-status.dead { background:var(--accent); box-shadow:0 0 12px rgba(255,58,94,0.8); width:14px; height:14px; border:2px solid rgba(255,58,94,0.6); }
-  @keyframes alivePulse { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 14px var(--green),0 0 20px rgba(0,230,118,0.4)} }
-
-  /* DEAD LABEL */
-  .profile-card-dead-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:11px; font-weight:700; color:rgba(255,80,80,0.95); background:rgba(0,0,0,0.8); border:1px solid rgba(255,58,94,0.5); padding:5px 12px; border-radius:20px; letter-spacing:1px; z-index:5; pointer-events:none; backdrop-filter:blur(4px); white-space:nowrap; }
-
-  .profile-card-refresh { position:absolute; top:14px; left:14px; font-size:10px; font-weight:600; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); border:1px solid rgba(0,230,118,0.3); color:var(--green); padding:3px 8px; border-radius:20px; z-index:4; }
-  .profile-card-stats-bar { position:absolute; top:14px; right:28px; display:flex; gap:5px; align-items:center; z-index:4; }
-  .profile-card-stat-pill { font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; backdrop-filter:blur(12px); white-space:nowrap; display:flex; align-items:center; gap:4px; }
-  .pcs-likes { background:rgba(0,0,0,0.55); border:1px solid rgba(255,100,130,0.5); color:#ff8fab; }
-  .pcs-matches { background:rgba(0,0,0,0.55); border:1px solid rgba(179,136,255,0.5); color:#c9a8ff; }
-  .pcs-loading { background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.3); font-size:10px; animation:pillFade 1.2s ease-in-out infinite; }
-  @keyframes pillFade { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
-
-  .profile-card-body { position:absolute; bottom:0; left:0; right:0; padding:18px 16px 14px; z-index:3; }
-  .profile-card-name { font-size:22px; font-weight:700; color:#fff; line-height:1.1; letter-spacing:-0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.5); }
-  .profile-card-age { font-size:18px; font-weight:400; color:rgba(255,255,255,0.85); margin-left:6px; }
-  .profile-card-bio { font-size:12px; color:rgba(255,255,255,0.7); margin-top:6px; line-height:1.5; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
-  .profile-card-actions { display:flex; gap:7px; margin-top:12px; }
-  .profile-card-btn { flex:1; padding:8px 6px; border-radius:50px; border:none; font-size:11px; font-weight:700; font-family:var(--font); cursor:pointer; transition:all 0.18s; backdrop-filter:blur(10px); }
-  .profile-card-btn:hover { transform:translateY(-1px); }
-  .profile-card-btn-bio { background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.25); }
-  .profile-card-btn-bio:hover { background:rgba(255,255,255,0.28); }
-  .profile-card-btn-check { background:rgba(0,230,118,0.2); color:var(--green); border:1px solid rgba(0,230,118,0.35); }
-  .profile-card-btn-check:hover { background:rgba(0,230,118,0.35); }
-  .profile-card-btn-del { background:rgba(255,58,94,0.2); color:var(--accent); border:1px solid rgba(255,58,94,0.35); flex:0 0 auto; padding:8px 12px; }
-  .profile-card-btn-del:hover { background:rgba(255,58,94,0.4); }
 
   .scroll-area { max-height:340px; overflow-y:auto; }
   .scroll-area::-webkit-scrollbar { width:4px; }
@@ -286,13 +284,13 @@
   .dash-auto-btn.stop { background:rgba(255,179,0,0.12); color:#ffb300; border:1px solid rgba(255,179,0,0.3); }
   .dash-auto-btn.stop:hover { background:rgba(255,179,0,0.25); transform:scale(1.1); }
 
-  /* TOGGLE SWITCH */
   .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
   .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
   .toggle-track { position:absolute; inset:0; border-radius:24px; background:var(--border); transition:background 0.2s; }
   .toggle-thumb { position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:white; transition:transform 0.2s; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
   .toggle-switch input:checked ~ .toggle-track { background:var(--accent); }
   .toggle-switch input:checked ~ .toggle-thumb { transform:translateX(20px); }
+  .toggle-switch.blue input:checked ~ .toggle-track { background:var(--blue); }
 
   .result-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; }
   .result-name { font-weight:600; font-size:14px; margin-bottom:8px; }
@@ -308,6 +306,13 @@
   .match-name { font-weight:600; font-size:14px; }
   .match-account { font-size:11px; color:var(--muted); margin-top:2px; }
   .match-msg { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* Pool styles */
+  .pool-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-family:var(--font-mono); font-size:11px; }
+  .pool-item-num { color:var(--muted); min-width:24px; font-size:10px; }
+  .pool-item-url { color:var(--blue); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pool-item-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:0 4px; line-height:1; transition:color 0.15s; }
+  .pool-item-del:hover { color:var(--accent); }
 </style>
 </head>
 <body>
@@ -375,7 +380,7 @@
     <div class="nav-section-label">Config</div>
     <div class="nav-item" data-nav="proxy" onclick="showPage('proxy')">
       <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-      <span class="nav-label">Proxy</span>
+      <span class="nav-label">Proxy Global</span>
     </div>
     <div class="nav-item" data-nav="admin" id="nav-admin" style="display:none" onclick="showPage('admin')">
       <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
@@ -433,9 +438,8 @@
 <!-- ACCOUNTS -->
 <div class="page" id="page-accounts">
   <div class="page-header">
-    <div><div class="page-title">Comptes Tinder</div><div class="page-sub">Gérer tes comptes connectés</div></div>
+    <div><div class="page-title">Comptes Tinder</div><div class="page-sub">Gérer tes comptes — chaque compte a son propre proxy IP</div></div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-secondary btn-sm" onclick="checkAllTokens()">✅ Vérifier tokens</button>
       <button class="btn btn-secondary btn-sm" onclick="openModal('modal-account-settings')" title="Paramètres comptes" style="padding:6px 10px;font-size:15px">⚙️</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('modal-add')">➕ Ajouter</button>
     </div>
@@ -445,7 +449,7 @@
 
 <!-- AUTO SWIPE -->
 <div class="page" id="page-swipe">
-  <div class="page-header"><div><div class="page-title">Auto-Swipe</div><div class="page-sub">Swipe automatique</div></div></div>
+  <div class="page-header"><div><div class="page-title">Auto-Swipe</div><div class="page-sub">Chaque compte swipe avec sa propre IP</div></div></div>
   <div class="grid-2">
     <div>
       <div class="card">
@@ -478,7 +482,7 @@
 
 <!-- MASS DM -->
 <div class="page" id="page-massdm">
-  <div class="page-header"><div><div class="page-title">Mass DM</div><div class="page-sub">Envoie des messages à tes matchs</div></div></div>
+  <div class="page-header"><div><div class="page-title">Mass DM</div><div class="page-sub">Chaque compte envoie avec sa propre IP</div></div></div>
   <div class="grid-2">
     <div>
       <div class="card">
@@ -512,7 +516,7 @@
 
 <!-- AUTOMATISATION -->
 <div class="page" id="page-automation">
-  <div class="page-header"><div><div class="page-title">Automatisation</div><div class="page-sub">Tâches récurrentes planifiées</div></div><button class="btn btn-primary btn-sm" onclick="openModal('modal-create-auto')">➕ Nouvelle tâche</button></div>
+  <div class="page-header"><div><div class="page-title">Automatisation</div><div class="page-sub">Tâches récurrentes — proxy par compte respecté</div></div><button class="btn btn-primary btn-sm" onclick="openModal('modal-create-auto')">➕ Nouvelle tâche</button></div>
   <div id="automation-tasks-list"><div class="empty-state"><div class="icon">🤖</div>Aucune tâche configurée</div></div>
 </div>
 
@@ -554,21 +558,61 @@
   <div class="card"><div class="card-title">Détail par période</div><div id="stats-period-detail"></div></div>
 </div>
 
-<!-- PROXY -->
+<!-- PROXY GLOBAL -->
 <div class="page" id="page-proxy">
-  <div class="page-header"><div><div class="page-title">Proxy</div><div class="page-sub">Configuration du proxy réseau</div></div></div>
+  <div class="page-header"><div><div class="page-title">Proxy & Pool</div><div class="page-sub">Proxy global + pool de proxies résidentiels</div></div></div>
   <div class="grid-2">
     <div class="card">
-      <div class="card-title">Configuration</div>
-      <div class="form-group"><label>URL du proxy</label><input type="text" id="proxy-url" placeholder="socks5h://user:pass@ip:port"></div>
+      <div class="card-title">Proxy global (fallback)</div>
+      <div style="padding:12px 14px;background:rgba(255,179,0,0.06);border:1px solid rgba(255,179,0,0.2);border-radius:8px;font-size:12px;color:rgba(255,179,0,0.8);margin-bottom:16px;line-height:1.5;">
+        💡 Utilisé en <strong>fallback</strong> pour les comptes sans proxy dédié.
+      </div>
+      <div class="form-group"><label>URL du proxy (fallback)</label><input type="text" id="proxy-url" placeholder="socks5://user:pass@ip:port"></div>
       <div class="form-group"><label>Lien de rotation d'IP (optionnel)</label><input type="text" id="proxy-rotation" placeholder="https://..."></div>
       <div style="display:flex;gap:10px">
         <button class="btn btn-primary" onclick="saveProxy()">💾 Sauvegarder</button>
         <button class="btn btn-secondary" onclick="testProxy()">🧪 Tester</button>
-        <button class="btn btn-secondary" onclick="rotateProxy()">🔄 Rotation IP</button>
+        <button class="btn btn-secondary" onclick="rotateProxy()">🔄 Rotation</button>
       </div>
     </div>
-    <div class="card"><div class="card-title">Statut</div><div id="proxy-status"><div class="empty-state">Charge la config pour voir le statut</div></div></div>
+    <div class="card"><div class="card-title">Statut proxy global</div><div id="proxy-status"><div class="empty-state">Charge la config pour voir le statut</div></div></div>
+  </div>
+
+  <!-- POOL DE PROXIES -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">🎱 Pool de proxies résidentiels</div>
+        <div style="font-size:12px;color:var(--muted)">Assignation automatique à l'import d'un compte — chaque proxy est utilisé une seule fois</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="background:rgba(68,138,255,0.12);border:1px solid rgba(68,138,255,0.3);border-radius:20px;padding:5px 16px;font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--blue)" id="pool-count-badge">0 proxies</div>
+        <button class="btn btn-danger btn-sm" onclick="clearProxyPool()">🗑 Vider</button>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <div class="form-group">
+          <label>Colle tes proxies (un par ligne)</label>
+          <textarea id="pool-input" rows="8" placeholder="user:pass@host:port&#10;user:pass@host:port&#10;socks5://user:pass@host:port&#10;..."></textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="saveProxyPool()" style="flex:1">💾 Remplacer le pool</button>
+          <button class="btn btn-secondary" onclick="addToProxyPool()" style="flex:1">➕ Ajouter au pool</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">Proxies dans le pool</div>
+        <div id="pool-list-preview" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+          <div class="empty-state" style="padding:20px">Pool vide</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:12px 14px;background:rgba(68,138,255,0.06);border:1px solid rgba(68,138,255,0.15);border-radius:10px;font-size:12px;color:rgba(68,138,255,0.8);line-height:1.6;">
+      <strong>Comment ça marche :</strong> Quand tu importes un compte et sélectionnes "🎱 Depuis le pool", un proxy est automatiquement pris dans la liste et assigné au compte. Ce proxy est ensuite retiré du pool pour ne pas être réutilisé.
+    </div>
   </div>
 </div>
 
@@ -625,13 +669,85 @@
         <textarea id="add-paste" rows="8" placeholder="Auth Token: xxx&#10;Refresh Token: xxx&#10;Device Persistent ID: xxx&#10;Device ID: xxx&#10;Latitude: 48.8566&#10;Longitude: 2.3522"></textarea>
       </div>
     </div>
-    <div class="form-group" style="margin-top:12px">
+
+    <!-- PROXY PAR COMPTE -->
+    <div style="border:1px solid rgba(68,138,255,0.25);border-radius:12px;padding:14px;margin-bottom:14px;background:rgba(68,138,255,0.03);">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">🌐 Proxy dédié</div>
+      <div class="proxy-mode-toggle">
+        <button class="proxy-mode-btn active" id="proxy-add-mode-manual" onclick="setAddProxyMode('manual')">✍️ Manuel</button>
+        <button class="proxy-mode-btn" id="proxy-add-mode-pool" onclick="setAddProxyMode('pool')">🎱 Pool</button>
+        <button class="proxy-mode-btn" id="proxy-add-mode-none" onclick="setAddProxyMode('none')">🚫 Aucun</button>
+      </div>
+      <div id="add-proxy-manual-section">
+        <input type="text" id="add-proxy-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port" style="font-size:12px;">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Le format sera automatiquement converti en socks5://</div>
+      </div>
+      <div id="add-proxy-pool-section" style="display:none">
+        <div style="padding:12px;background:rgba(68,138,255,0.08);border:1px solid rgba(68,138,255,0.25);border-radius:8px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px">🎱</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--blue)" id="pool-available-count">Chargement...</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Un proxy sera automatiquement assigné et retiré du pool</div>
+          </div>
+        </div>
+      </div>
+      <div id="add-proxy-none-section" style="display:none">
+        <div style="font-size:12px;color:var(--muted);padding:8px 4px;">Ce compte utilisera le proxy global en fallback</div>
+      </div>
+    </div>
+
+    <div class="form-group">
       <label>Tags (optionnel)</label>
       <div class="tag-selector" id="add-tag-selector"><span style="font-size:11px;color:var(--muted);font-style:italic">Aucun tag disponible</span></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn btn-primary" onclick="addAccount()">➕ Ajouter</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-add')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROXY PAR COMPTE (modal édition) -->
+<div class="modal-overlay" id="modal-account-proxy">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">
+      <span>🌐 Proxy — <span id="proxy-modal-account-name">Compte</span></span>
+      <button class="modal-close" onclick="closeModal('modal-account-proxy')">✕</button>
+    </div>
+    <input type="hidden" id="proxy-modal-account-id">
+    <div style="padding:12px 14px;background:rgba(68,138,255,0.06);border:1px solid rgba(68,138,255,0.2);border-radius:10px;margin-bottom:16px;font-size:12px;color:rgba(68,138,255,0.9);line-height:1.6;">
+      <strong>IP dédiée par compte.</strong> Toutes les requêtes de ce compte passeront par ce proxy.
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Proxy dédié activé</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px" id="proxy-modal-status-label">Désactivé</div>
+      </div>
+      <label class="toggle-switch blue">
+        <input type="checkbox" id="proxy-modal-enabled" onchange="onProxyModalToggle()">
+        <span class="toggle-track"></span>
+        <span class="toggle-thumb"></span>
+      </label>
+    </div>
+    <div id="proxy-modal-fields">
+      <div class="form-group">
+        <label>URL du proxy</label>
+        <input type="text" id="proxy-modal-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" onclick="testAccountProxyFromModal()">🧪 Tester l'IP</button>
+      </div>
+      <div id="proxy-modal-ip-result" style="display:none" class="proxy-ip-display">
+        <div class="proxy-ip-dot" id="proxy-modal-ip-dot"></div>
+        <div>
+          <div class="proxy-ip-text" id="proxy-modal-ip-text">—</div>
+          <div class="proxy-ip-label" id="proxy-modal-ip-label"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" onclick="saveAccountProxy()">💾 Sauvegarder</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-account-proxy')">Annuler</button>
     </div>
   </div>
 </div>
@@ -653,12 +769,7 @@
         </label>
       </div>
     </div>
-    <div style="padding:12px;background:rgba(255,179,0,0.06);border:1px solid rgba(255,179,0,0.2);border-radius:8px;font-size:11px;color:rgba(255,179,0,0.8);line-height:1.5;margin-bottom:16px">
-      ⚠️ Les comptes bannis ou expirés seront définitivement supprimés lors de la prochaine vérification des tokens.
-    </div>
-    <div style="text-align:right">
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-account-settings')">Fermer</button>
-    </div>
+    <div style="text-align:right"><button class="btn btn-secondary btn-sm" onclick="closeModal('modal-account-settings')">Fermer</button></div>
   </div>
 </div>
 
@@ -790,14 +901,14 @@
 <div id="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const API = 'https://sit-panel.onrender.com/api';
+const API = '/api';
 let authToken = sessionStorage.getItem('auth_token') || null;
 let accounts = [], allTags = [], swipeMode = 'basic', dmMode = 'massdm';
 let swipeJobId = null, dmJobId = null, swipeInterval = null, dmInterval = null;
 let stats = {}, addTabMode = 'paste', currentUser = null;
 let accountSettings = { auto_delete_dead: false };
-let matchCounts = {}, statsHistory = [], currentStatsPeriod = '7d', statsChart = null;
-let currentAutoLogTaskId = null;
+let statsHistory = [], currentStatsPeriod = '7d', statsChart = null;
+let currentAutoLogTaskId = null, addProxyMode = 'manual';
 const TAG_COLORS = ['#ff3a5e','#ff7c4d','#ffb300','#00e676','#00bcd4','#448aff','#b388ff','#f06292','#aed581','#4dd0e1'];
 let selectedCreateTagColor = TAG_COLORS[5], selectedEditTagColor = TAG_COLORS[5];
 
@@ -871,7 +982,6 @@ function initApp() {
   setInterval(checkServer, 15000);
 }
 
-// ── SERVER ──
 async function checkServer() {
   try {
     const r = await apiFetch(`${API}/auth/me`,{signal:AbortSignal.timeout(3000)});
@@ -884,7 +994,6 @@ async function checkServer() {
   }
 }
 
-// ── ACCOUNT SETTINGS ──
 async function loadAccountSettings() {
   try {
     const r = await apiFetch(`${API}/settings`);
@@ -902,14 +1011,197 @@ async function saveAccountSettings() {
   } catch{ toast('Erreur sauvegarde','error'); }
 }
 
+// ── PROXY HELPERS ──
+function parseProxyUrl(raw) {
+  raw = raw.trim();
+  if (!raw) return '';
+  if (raw.startsWith('http') || raw.startsWith('socks')) return raw;
+  // Format user:pass@host:port → socks5://user:pass@host:port
+  if (raw.includes('@')) return `socks5://${raw}`;
+  // Format host:port:user:pass
+  const firstColon = raw.indexOf(':');
+  if (firstColon === -1) return raw;
+  const host = raw.substring(0, firstColon);
+  const rest1 = raw.substring(firstColon + 1);
+  const secondColon = rest1.indexOf(':');
+  if (secondColon === -1) return `socks5://${raw}`;
+  const port = rest1.substring(0, secondColon);
+  const rest2 = rest1.substring(secondColon + 1);
+  const thirdColon = rest2.indexOf(':');
+  if (thirdColon === -1) return raw;
+  const user = rest2.substring(0, thirdColon);
+  const pass_ = rest2.substring(thirdColon + 1);
+  return `socks5://${user}:${pass_}@${host}:${port}`;
+}
+
+// ── PROXY POOL ──
+async function loadPoolCount() {
+  try {
+    const r = await apiFetch(`${API}/proxy-pool`);
+    const d = await r.json();
+    const badge = document.getElementById('pool-count-badge');
+    if(badge) badge.textContent = `${d.count} proxies`;
+    const countEl = document.getElementById('pool-available-count');
+    if(countEl) countEl.textContent = d.count > 0
+      ? `✅ ${d.count} proxies disponibles dans le pool`
+      : '⚠️ Pool vide — ajoute des proxies dans Proxy & Pool';
+    renderPoolPreview(d.pool || []);
+  } catch {}
+}
+
+function renderPoolPreview(pool) {
+  const el = document.getElementById('pool-list-preview');
+  if(!el) return;
+  if(!pool.length){ el.innerHTML='<div class="empty-state" style="padding:20px">Pool vide</div>'; return; }
+  el.innerHTML = pool.map((p, i) => `
+    <div class="pool-item">
+      <span class="pool-item-num">#${i+1}</span>
+      <span class="pool-item-url">${p}</span>
+      <button class="pool-item-del" onclick="removeFromPool(${i})" title="Supprimer">×</button>
+    </div>`).join('');
+}
+
+async function removeFromPool(index) {
+  try {
+    const r = await apiFetch(`${API}/proxy-pool`);
+    const d = await r.json();
+    const pool = d.pool || [];
+    pool.splice(index, 1);
+    await apiFetch(`${API}/proxy-pool`, { method: 'POST', body: JSON.stringify({ proxies: pool }) });
+    loadPoolCount();
+  } catch { toast('Erreur', 'error'); }
+}
+
+async function saveProxyPool() {
+  const raw = document.getElementById('pool-input').value;
+  const proxies = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  if(!proxies.length){ toast('Aucun proxy à sauvegarder','error'); return; }
+  try {
+    const r = await apiFetch(`${API}/proxy-pool`, { method: 'POST', body: JSON.stringify({ proxies }) });
+    const d = await r.json();
+    if(d.success){ toast(`✅ Pool mis à jour — ${d.count} proxies`, 'success'); document.getElementById('pool-input').value=''; loadPoolCount(); }
+  } catch { toast('Erreur réseau','error'); }
+}
+
+async function addToProxyPool() {
+  const raw = document.getElementById('pool-input').value;
+  const proxies = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  if(!proxies.length){ toast('Aucun proxy à ajouter','error'); return; }
+  try {
+    const r = await apiFetch(`${API}/proxy-pool/add`, { method: 'POST', body: JSON.stringify({ proxies }) });
+    const d = await r.json();
+    if(d.success){ toast(`✅ ${proxies.length} proxy(s) ajouté(s) — Total: ${d.count}`, 'success'); document.getElementById('pool-input').value=''; loadPoolCount(); }
+  } catch { toast('Erreur réseau','error'); }
+}
+
+async function clearProxyPool() {
+  if(!confirm('Vider tout le pool de proxies ?')) return;
+  try {
+    await apiFetch(`${API}/proxy-pool/clear`, { method: 'POST' });
+    toast('Pool vidé','success'); loadPoolCount();
+  } catch { toast('Erreur réseau','error'); }
+}
+
+// ── ADD PROXY MODE ──
+function setAddProxyMode(mode) {
+  addProxyMode = mode;
+  document.getElementById('proxy-add-mode-manual').classList.toggle('active', mode==='manual');
+  document.getElementById('proxy-add-mode-pool').classList.toggle('active', mode==='pool');
+  document.getElementById('proxy-add-mode-none').classList.toggle('active', mode==='none');
+  document.getElementById('add-proxy-manual-section').style.display = mode==='manual' ? '' : 'none';
+  document.getElementById('add-proxy-pool-section').style.display = mode==='pool' ? '' : 'none';
+  document.getElementById('add-proxy-none-section').style.display = mode==='none' ? '' : 'none';
+  if(mode==='pool') loadPoolCount();
+}
+
+// ── PROXY COMPTE (modal édition) ──
+function openAccountProxyModal(accountId) {
+  const acc = accounts.find(a => a.user_id === accountId);
+  if(!acc) return;
+  document.getElementById('proxy-modal-account-id').value = accountId;
+  document.getElementById('proxy-modal-account-name').textContent = acc.name;
+  const enabled = !!acc.proxy_enabled;
+  document.getElementById('proxy-modal-enabled').checked = enabled;
+  document.getElementById('proxy-modal-url').value = acc.proxy_url || '';
+  document.getElementById('proxy-modal-fields').style.display = enabled ? '' : 'none';
+  document.getElementById('proxy-modal-status-label').textContent = enabled
+    ? `Actif — ${acc.proxy_url || 'URL non définie'}`
+    : 'Désactivé — utilise le proxy global';
+  document.getElementById('proxy-modal-ip-result').style.display = 'none';
+  openModal('modal-account-proxy');
+}
+
+function onProxyModalToggle() {
+  const enabled = document.getElementById('proxy-modal-enabled').checked;
+  document.getElementById('proxy-modal-fields').style.display = enabled ? '' : 'none';
+  document.getElementById('proxy-modal-status-label').textContent = enabled
+    ? "Activé — entre l'URL ci-dessous"
+    : 'Désactivé — utilise le proxy global';
+}
+
+async function testAccountProxyFromModal() {
+  const accountId = document.getElementById('proxy-modal-account-id').value;
+  const rawUrl = document.getElementById('proxy-modal-url').value.trim();
+  const resultEl = document.getElementById('proxy-modal-ip-result');
+  const dotEl = document.getElementById('proxy-modal-ip-dot');
+  const textEl = document.getElementById('proxy-modal-ip-text');
+  const labelEl = document.getElementById('proxy-modal-ip-label');
+  resultEl.style.display = '';
+  dotEl.className = 'proxy-ip-dot';
+  textEl.textContent = 'Test en cours...';
+  labelEl.textContent = '';
+  const proxyUrl = parseProxyUrl(rawUrl);
+  if(proxyUrl !== rawUrl && proxyUrl) document.getElementById('proxy-modal-url').value = proxyUrl;
+  try {
+    const r = await apiFetch(`${API}/accounts/${accountId}/proxy/test`, {
+      method: 'POST',
+      body: JSON.stringify({ proxy_url: proxyUrl || null })
+    });
+    const d = await r.json();
+    if(d.success) {
+      dotEl.className = 'proxy-ip-dot ok';
+      textEl.textContent = d.ip;
+      labelEl.textContent = d.using_account_proxy ? '✅ Proxy fonctionnel' : '⚠️ IP directe (proxy non actif)';
+    } else {
+      dotEl.className = 'proxy-ip-dot fail';
+      textEl.textContent = 'Échec';
+      labelEl.textContent = 'Proxy inaccessible ou URL incorrecte';
+    }
+  } catch {
+    dotEl.className = 'proxy-ip-dot fail';
+    textEl.textContent = 'Erreur réseau';
+  }
+}
+
+async function saveAccountProxy() {
+  const accountId = document.getElementById('proxy-modal-account-id').value;
+  const enabled   = document.getElementById('proxy-modal-enabled').checked;
+  const rawUrl    = document.getElementById('proxy-modal-url').value.trim();
+  const proxy_url = enabled ? parseProxyUrl(rawUrl) : '';
+  if(enabled && !proxy_url){ toast('Entre une URL de proxy','error'); return; }
+  try {
+    const r = await apiFetch(`${API}/accounts/${accountId}/proxy`, {
+      method: 'POST',
+      body: JSON.stringify({ proxy_enabled: enabled, proxy_url })
+    });
+    const d = await r.json();
+    if(d.success) {
+      const acc = accounts.find(a => a.user_id === accountId);
+      if(acc){ acc.proxy_enabled = d.proxy_enabled; acc.proxy_url = d.proxy_url; }
+      toast(enabled ? '✅ Proxy activé' : '🔴 Proxy désactivé', 'success');
+      closeModal('modal-account-proxy');
+      renderAccountsList();
+    } else toast(`❌ ${d.error}`, 'error');
+  } catch { toast('Erreur réseau','error'); }
+}
+
 // ── TAGS ──
 async function loadTags() {
   try { const r=await apiFetch(`${API}/tags`); const d=await r.json(); if(d.success) allTags=d.tags; } catch{}
 }
 
 function renderTagsList() {
-  const el=document.getElementById('tags-list');
-  if(!el) return;
+  const el=document.getElementById('tags-list'); if(!el) return;
   if(!allTags.length){ el.innerHTML='<div class="empty-state" style="padding:20px">Aucun tag créé</div>'; return; }
   el.innerHTML=allTags.map(t=>`
     <div class="tag-mgmt-row">
@@ -921,24 +1213,6 @@ function renderTagsList() {
     </div>`).join('');
 }
 
-function buildColorPicker(containerId, selectedColor, cb) {
-  const el=document.getElementById(containerId); if(!el) return;
-  el.innerHTML=TAG_COLORS.map(c=>`<div class="color-swatch ${c===selectedColor?'active':''}" style="background:${c}" onclick="(${cb.toString()})('${c}',this,'${containerId}')"></div>`).join('');
-}
-
-function openCreateTagModal() {
-  selectedCreateTagColor=TAG_COLORS[5];
-  document.getElementById('ct-name').value='';
-  renderColorPicker('ct-color-picker', selectedCreateTagColor, (c,el,cid)=>{
-    selectedCreateTagColor=c;
-    document.querySelectorAll(`#${cid} .color-swatch`).forEach(s=>s.classList.remove('active')); el.classList.add('active');
-    updateTagPreview('ct-preview',document.getElementById('ct-name').value||'Aperçu',c);
-  });
-  updateTagPreview('ct-preview','Aperçu',selectedCreateTagColor);
-  document.getElementById('ct-name').oninput=e=>updateTagPreview('ct-preview',e.target.value||'Aperçu',selectedCreateTagColor);
-  openModal('modal-create-tag');
-}
-
 function renderColorPicker(containerId, selectedColor, onSelect) {
   const el=document.getElementById(containerId); if(!el) return;
   el.innerHTML=TAG_COLORS.map(c=>`<div class="color-swatch ${c===selectedColor?'active':''}" style="background:${c}" data-color="${c}"></div>`).join('');
@@ -946,7 +1220,7 @@ function renderColorPicker(containerId, selectedColor, onSelect) {
     sw.addEventListener('click',function(){
       el.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
       this.classList.add('active');
-      onSelect(this.dataset.color, this, containerId);
+      onSelect(this.dataset.color);
     });
   });
 }
@@ -954,6 +1228,15 @@ function renderColorPicker(containerId, selectedColor, onSelect) {
 function updateTagPreview(previewId, name, color) {
   const el=document.getElementById(previewId); if(!el) return;
   el.textContent=name; el.style.background=color+'22'; el.style.color=color; el.style.border=`1px solid ${color}44`;
+}
+
+function openCreateTagModal() {
+  selectedCreateTagColor=TAG_COLORS[5];
+  document.getElementById('ct-name').value='';
+  renderColorPicker('ct-color-picker', selectedCreateTagColor, (c)=>{ selectedCreateTagColor=c; updateTagPreview('ct-preview',document.getElementById('ct-name').value||'Aperçu',c); });
+  updateTagPreview('ct-preview','Aperçu',selectedCreateTagColor);
+  document.getElementById('ct-name').oninput=e=>updateTagPreview('ct-preview',e.target.value||'Aperçu',selectedCreateTagColor);
+  openModal('modal-create-tag');
 }
 
 async function createTag() {
@@ -972,10 +1255,7 @@ function openEditTag(tagId) {
   selectedEditTagColor=tag.color;
   document.getElementById('et-id').value=tagId;
   document.getElementById('et-name').value=tag.name;
-  renderColorPicker('et-color-picker',selectedEditTagColor,(c,el,cid)=>{
-    selectedEditTagColor=c;
-    updateTagPreview('et-preview',document.getElementById('et-name').value||'Aperçu',c);
-  });
+  renderColorPicker('et-color-picker',selectedEditTagColor,(c)=>{ selectedEditTagColor=c; updateTagPreview('et-preview',document.getElementById('et-name').value||'Aperçu',c); });
   updateTagPreview('et-preview',tag.name,selectedEditTagColor);
   document.getElementById('et-name').oninput=e=>updateTagPreview('et-preview',e.target.value||'Aperçu',selectedEditTagColor);
   openModal('modal-edit-tag');
@@ -1009,7 +1289,6 @@ function renderAddTagSelector() {
   el.innerHTML=allTags.map(t=>`<div class="tag-selector-item" data-tag-id="${t.id}" style="background:${t.color}22;color:${t.color}" onclick="this.classList.toggle('selected')">${t.name}</div>`).join('');
 }
 
-function toggleTagSelection(el){ el.classList.toggle('selected'); }
 function getSelectedTagIds(selectorId){ return [...document.querySelectorAll(`#${selectorId} .tag-selector-item.selected`)].map(el=>el.dataset.tagId); }
 
 function openAccountTagsModal(accountId) {
@@ -1043,7 +1322,7 @@ function showPage(id) {
   if(id==='admin'){ loadAdminUsers(); renderTagsList(); }
   if(id==='automation') loadAutomationPage();
   if(id==='stats') loadStatsPage();
-  if(id==='accounts') loadMatchCounts();
+  if(id==='proxy'){ loadProxyData(); loadPoolCount(); }
 }
 
 // ── ACCOUNTS ──
@@ -1061,34 +1340,31 @@ function renderAccountsList() {
   el.innerHTML=`<div class="profiles-grid">${accounts.map(a=>{
     const hasPic=a.photo&&a.photo.length>0;
     const bgStyle=hasPic?`style="background-image:url('${a.photo}')"`:  '';
-    const isAlive=a._alive===true;
-    const isDead=a._alive===false;
+    const isAlive=a._alive===true, isDead=a._alive===false;
     const statusClass=isAlive?'alive':isDead?'dead':'';
     const cardDeadClass=isDead?'is-dead':'';
     const accountTags=(a.tags||[]).map(tid=>allTags.find(t=>t.id===tid)).filter(Boolean);
     const tagsHtml=accountTags.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${accountTags.map(t=>`<span class="tag-pill" style="background:${t.color}33;color:${t.color};border:1px solid ${t.color}55">${t.name}</span>`).join('')}</div>`:'';
-    const mCount=matchCounts[a.user_id];
-    const totalLikes=a.total_likes!=null?a.total_likes:null;
-    const totalMatches=mCount!=null?mCount:(a.cached_match_count!=null?a.cached_match_count:null);
-    const matchesLoading=mCount==null&&a.cached_match_count==null;
-    const statsBar=`<div class="profile-card-stats-bar" id="stats-bar-${a.user_id}">${totalLikes!=null?`<div class="profile-card-stat-pill pcs-likes">❤️ ${totalLikes.toLocaleString('fr-FR')}</div>`:''}${totalMatches!=null?`<div class="profile-card-stat-pill pcs-matches">💘 ${totalMatches.toLocaleString('fr-FR')}</div>`:matchesLoading?`<div class="profile-card-stat-pill pcs-loading">💘 …</div>`:''}</div>`;
+    const hasAccountProxy = a.proxy_enabled && a.proxy_url;
+    const proxyBadgeHtml = hasAccountProxy ? `<div class="profile-card-proxy-badge"><span class="proxy-dot"></span>PROXY DÉDIÉ</div>` : '';
+    const proxyBtnClass = hasAccountProxy ? 'active' : '';
     return `<div class="profile-card ${cardDeadClass}" id="pcard-${a.user_id}">
       ${hasPic?`<div class="profile-card-bg" ${bgStyle}></div>`:`<div class="profile-card-bg-placeholder">🔥</div>`}
       <div class="profile-card-gradient"></div>
-      <div class="profile-card-status ${statusClass}" id="status-dot-${a.user_id}" title="${isAlive?'Compte actif':isDead?'❌ Banni/Expiré':'Statut inconnu'}"></div>
+      <div class="profile-card-status ${statusClass}"></div>
       ${isDead?`<div class="profile-card-dead-label">💀 BANNI / EXPIRÉ</div>`:''}
       ${a.has_refresh?`<div class="profile-card-refresh">🔄 refresh</div>`:''}
-      ${!isDead?statsBar:''}
+      ${!isDead?proxyBadgeHtml:''}
       <div class="profile-card-body">
         <div class="profile-card-name">${a.name}${a.age?`<span class="profile-card-age">${a.age}</span>`:''}</div>
         ${isDead?`<div style="color:rgba(255,80,80,0.8);font-size:12px;margin-top:6px;font-weight:600;">⚠️ Compte invalide</div>`:''}
         ${!isDead&&a.bio?`<div class="profile-card-bio">${a.bio}</div>`:(!isDead?'<div class="profile-card-bio" style="color:rgba(255,255,255,0.3);font-style:italic">Aucune bio</div>':'')}
         ${!isDead?tagsHtml:''}
-        ${a.added_at?`<div style="margin-top:8px;font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.22);display:flex;align-items:center;gap:4px;">⏱ ajouté le ${a.added_at}</div>`:''}
+        ${a.added_at?`<div style="margin-top:8px;font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.22);">⏱ ${a.added_at}</div>`:''}
         <div class="profile-card-actions">
           ${!isDead?`<button class="profile-card-btn profile-card-btn-bio" onclick="openBioModal('${a.user_id}')">✏️ Bio</button>`:''}
-          ${!isDead?`<button class="profile-card-btn" style="flex:1;background:rgba(179,136,255,0.2);color:var(--purple);border:1px solid rgba(179,136,255,0.35);border-radius:50px;font-size:11px;font-weight:700;padding:8px 6px;cursor:pointer;backdrop-filter:blur(10px)" onclick="openAccountTagsModal('${a.user_id}')">🏷</button>`:''}
-          <button class="profile-card-btn profile-card-btn-check" onclick="checkSingleToken('${a.user_id}')">✓</button>
+          ${!isDead?`<button class="profile-card-btn profile-card-btn-proxy ${proxyBtnClass}" onclick="openAccountProxyModal('${a.user_id}')" title="${hasAccountProxy?'Proxy dédié actif':'Configurer un proxy dédié'}">🌐</button>`:''}
+          ${!isDead?`<button class="profile-card-btn" style="flex:0 0 auto;background:rgba(179,136,255,0.2);color:var(--purple);border:1px solid rgba(179,136,255,0.35);border-radius:50px;font-size:11px;font-weight:700;padding:8px 10px;cursor:pointer;backdrop-filter:blur(10px)" onclick="openAccountTagsModal('${a.user_id}')">🏷</button>`:''}
           <button class="profile-card-btn profile-card-btn-del" onclick="deleteAccount('${a.user_id}','${a.name}')">🗑</button>
         </div>
       </div>
@@ -1099,12 +1375,17 @@ function renderAccountsList() {
 function renderAccountCheckboxes(prefix) {
   const el=document.getElementById(`${prefix}-account-checkboxes`); if(!el) return;
   if(!accounts.length){ el.innerHTML='<div class="empty-state" style="padding:20px">Aucun compte</div>'; return; }
-  el.innerHTML=accounts.map(a=>`
-    <div class="account-item" style="margin-bottom:6px;cursor:pointer" onclick="toggleCheck('${prefix}-chk-${a.user_id}')">
+  el.innerHTML=accounts.map(a=>{
+    const hasProxy = a.proxy_enabled && a.proxy_url;
+    return `<div class="account-item" style="margin-bottom:6px;cursor:pointer" onclick="toggleCheck('${prefix}-chk-${a.user_id}')">
       <input type="checkbox" id="${prefix}-chk-${a.user_id}" value="${a.user_id}" class="account-checkbox ${prefix}-chk" onclick="event.stopPropagation()">
       <div class="account-avatar" style="width:32px;height:32px;font-size:12px">${a.name[0].toUpperCase()}</div>
-      <div class="account-info"><div class="account-name" style="font-size:13px">${a.name}</div></div>
-    </div>`).join('');
+      <div class="account-info">
+        <div class="account-name" style="font-size:13px">${a.name}</div>
+        ${hasProxy?`<div style="font-size:10px;color:var(--blue);margin-top:2px;display:flex;align-items:center;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--blue);display:inline-block;"></span>IP dédiée</div>`:`<div style="font-size:10px;color:var(--muted);margin-top:2px;">Proxy global</div>`}
+      </div>
+    </div>`;
+  }).join('');
   document.querySelectorAll(`.${prefix}-chk`).forEach(c=>c.checked=true);
   const all=document.getElementById(`${prefix}-select-all`); if(all) all.checked=true;
 }
@@ -1120,55 +1401,7 @@ async function deleteAccount(userId, name) {
     const d=await r.json();
     if(d.success){ toast(`${name} supprimé`,'success'); accounts=accounts.filter(a=>a.user_id!==userId); renderAccountsList(); renderAccountCheckboxes('swipe'); renderAccountCheckboxes('dm'); document.getElementById('dash-accounts').textContent=accounts.length; }
     else toast(`❌ Erreur: ${d.error||'Erreur suppression'}`,'error');
-  } catch(e){ console.error('Delete error:',e); toast('Erreur réseau','error'); }
-}
-
-async function checkSingleToken(userId) {
-  const dot=document.getElementById(`status-dot-${userId}`);
-  if(dot) dot.className='profile-card-status';
-  toast('Vérification en cours...','info');
-  try {
-    const r=await apiFetch(`${API}/accounts/check`,{method:'POST'});
-    const d=await r.json();
-    if(d.success){
-      const res=d.results.find(r=>r.user_id===userId);
-      const acc=accounts.find(a=>a.user_id===userId);
-      if(acc) acc._alive=res?.valid;
-      toast(res?.valid?`✅ ${res.name} — compte actif`:`❌ Compte invalide ou banni`,res?.valid?'success':'error');
-      renderAccountsList();
-    }
-  } catch{ toast('Erreur vérification','error'); }
-}
-
-async function checkAllTokens() {
-  toast('Vérification de tous les tokens...','info');
-  accounts.forEach(a=>{ const dot=document.getElementById(`status-dot-${a.user_id}`); if(dot) dot.className='profile-card-status'; });
-  try {
-    const r=await apiFetch(`${API}/accounts/check`,{method:'POST'});
-    const d=await r.json();
-    if(d.success){
-      const ok=d.results.filter(r=>r.valid).length;
-      const ko=d.results.length-ok;
-      toast(`✅ ${ok} actifs${ko>0?` — 🗑 ${ko} invalide${ko>1?'s':''}${accountSettings.auto_delete_dead?' supprimés':''}`:''}`,ok===d.results.length?'success':'error');
-      loadAccountsData();
-    }
-  } catch{ toast('Erreur vérification','error'); }
-}
-
-let matchCountsLoading = false;
-async function loadMatchCounts() {
-  if(matchCountsLoading) return;
-  matchCountsLoading=true;
-  try {
-    const r=await apiFetch(`${API}/accounts/match-counts`);
-    const d=await r.json();
-    if(d.success){ matchCounts=d.counts; renderAccountsList(); }
-  } catch{}
-  matchCountsLoading=false;
-}
-
-async function refreshMatchCountsSilent() {
-  try { const r=await apiFetch(`${API}/accounts/match-counts`); const d=await r.json(); if(d.success){ matchCounts=d.counts; renderAccountsList(); } } catch{}
+  } catch(e){ toast('Erreur réseau','error'); }
 }
 
 // ── ADD ACCOUNT ──
@@ -1189,12 +1422,30 @@ async function addAccount() {
     payload={token:document.getElementById('add-token').value.trim(),persistent_device_id:document.getElementById('add-pdid').value.trim(),device_id:document.getElementById('add-did').value.trim(),latitude:parseFloat(document.getElementById('add-lat').value)||48.8566,longitude:parseFloat(document.getElementById('add-lon').value)||2.3522,refresh_token:document.getElementById('add-refresh').value.trim()||undefined};
     if(!payload.token||!payload.persistent_device_id||!payload.device_id){ toast('Remplis les champs obligatoires','error'); return; }
   }
+
+  // Gestion proxy
+  let proxyUrl = '', proxyEnabled = false;
+  if(addProxyMode === 'manual') {
+    const rawUrl = document.getElementById('add-proxy-url')?.value.trim() || '';
+    proxyUrl = parseProxyUrl(rawUrl);
+    proxyEnabled = !!proxyUrl;
+  } else if(addProxyMode === 'pool') {
+    try {
+      const pr = await apiFetch(`${API}/proxy-pool/pop`, { method: 'POST' });
+      const pd = await pr.json();
+      if(pd.success){ proxyUrl = pd.proxy; proxyEnabled = true; toast('🎱 Proxy assigné depuis le pool','info'); }
+      else toast('⚠️ Pool vide — compte ajouté sans proxy','info');
+    } catch {}
+  }
+  payload.proxy_enabled = proxyEnabled;
+  payload.proxy_url = proxyUrl;
+  payload.tags = getSelectedTagIds('add-tag-selector');
+
   toast('Vérification du token...','info');
-  payload.tags=getSelectedTagIds('add-tag-selector');
   try {
     const r=await apiFetch(`${API}/accounts`,{method:'POST',body:JSON.stringify(payload)});
     const d=await r.json();
-    if(d.success){ toast(`✅ ${d.name} ajouté !`,'success'); closeModal('modal-add'); document.querySelectorAll('#add-tag-selector .tag-selector-item').forEach(el=>el.classList.remove('selected')); loadAccountsData(); }
+    if(d.success){ toast(`✅ ${d.name} ajouté !`,'success'); closeModal('modal-add'); document.querySelectorAll('#add-tag-selector .tag-selector-item').forEach(el=>el.classList.remove('selected')); loadAccountsData(); loadPoolCount(); }
     else toast(`❌ ${d.error}`,'error');
   } catch{ toast('Erreur réseau — backend connecté ?','error'); }
 }
@@ -1283,7 +1534,6 @@ async function loadStatsPage() {
 }
 
 function filterHistoryByPeriod(history, period, from, to) {
-  const today=new Date().toISOString().slice(0,10);
   if(period==='all') return history;
   if(period==='custom'&&from&&to) return history.filter(e=>e.date>=from&&e.date<=to);
   const days=parseInt(period)||7;
@@ -1308,18 +1558,13 @@ function renderStatsChart() {
   const filtered=filterHistoryByPeriod(statsHistory,currentStatsPeriod,from,to);
   const labels=filtered.map(e=>e.date);
   const datasets=[];
-  const showSwipes=document.getElementById('chart-swipes')?.checked!==false;
-  const showMessages=document.getElementById('chart-messages')?.checked!==false;
-  const showMatches=document.getElementById('chart-matches')?.checked!==false;
-  const showReplies=document.getElementById('chart-replies')?.checked!==false;
-  const showCta=document.getElementById('chart-cta')?.checked!==false;
-  if(showSwipes) datasets.push({label:'Swipes',data:filtered.map(e=>e.swipes||0),borderColor:'#448aff',backgroundColor:'rgba(68,138,255,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
-  if(showMessages) datasets.push({label:'Messages',data:filtered.map(e=>e.messages||0),borderColor:'#ff3a5e',backgroundColor:'rgba(255,58,94,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
-  if(showMatches) datasets.push({label:'Matchs',data:filtered.map(e=>e.matches||0),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
-  if(showReplies) datasets.push({label:'Réponses',data:filtered.map(e=>e.replies||0),borderColor:'#00bcd4',backgroundColor:'rgba(0,188,212,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
-  if(showCta) datasets.push({label:'CTA',data:filtered.map(e=>e.cta_sent||0),borderColor:'#ffb300',backgroundColor:'rgba(255,179,0,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
+  if(document.getElementById('chart-swipes')?.checked!==false) datasets.push({label:'Swipes',data:filtered.map(e=>e.swipes||0),borderColor:'#448aff',backgroundColor:'rgba(68,138,255,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
+  if(document.getElementById('chart-messages')?.checked!==false) datasets.push({label:'Messages',data:filtered.map(e=>e.messages||0),borderColor:'#ff3a5e',backgroundColor:'rgba(255,58,94,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
+  if(document.getElementById('chart-matches')?.checked!==false) datasets.push({label:'Matchs',data:filtered.map(e=>e.matches||0),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
+  if(document.getElementById('chart-replies')?.checked!==false) datasets.push({label:'Réponses',data:filtered.map(e=>e.replies||0),borderColor:'#00bcd4',backgroundColor:'rgba(0,188,212,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
+  if(document.getElementById('chart-cta')?.checked!==false) datasets.push({label:'CTA',data:filtered.map(e=>e.cta_sent||0),borderColor:'#ffb300',backgroundColor:'rgba(255,179,0,0.1)',tension:0.4,fill:true,pointRadius:4,pointHoverRadius:6});
   if(statsChart) statsChart.destroy();
-  statsChart=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'rgba(14,14,24,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleFont:{family:'Geist Mono',size:11},bodyFont:{family:'Geist Mono',size:11}}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:11},maxTicksLimit:10}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:11}},beginAtZero:true}},interaction:{mode:'index',intersect:false}}});
+  statsChart=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'rgba(14,14,24,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:11},maxTicksLimit:10}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:11}},beginAtZero:true}},interaction:{mode:'index',intersect:false}}});
   ['chart-swipes','chart-messages','chart-matches','chart-replies','chart-cta'].forEach(id=>{ const el=document.getElementById(id); if(el) el.onchange=()=>renderStatsChart(); });
 }
 
@@ -1328,7 +1573,7 @@ function renderStatsPeriodDetail() {
   const from=document.getElementById('stats-from')?.value, to=document.getElementById('stats-to')?.value;
   const filtered=filterHistoryByPeriod(statsHistory,currentStatsPeriod,from,to).slice(-10).reverse();
   if(!filtered.length){ el.innerHTML='<div class="empty-state">Aucune donnée</div>'; return; }
-  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid var(--border);color:var(--muted)"><th style="text-align:left;padding:8px 12px">Date</th><th style="text-align:right;padding:8px 12px">Swipes</th><th style="text-align:right;padding:8px 12px">Messages</th><th style="text-align:right;padding:8px 12px">Matchs</th><th style="text-align:right;padding:8px 12px">Réponses</th><th style="text-align:right;padding:8px 12px">CTA</th></tr></thead><tbody>${filtered.map(e=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''"><td style="padding:8px 12px;font-family:var(--font-mono)">${e.date}</td><td style="padding:8px 12px;text-align:right;color:var(--blue);font-family:var(--font-mono)">${(e.swipes||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--accent);font-family:var(--font-mono)">${(e.messages||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-family:var(--font-mono)">${(e.matches||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--teal);font-family:var(--font-mono)">${(e.replies||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:#ffb300;font-family:var(--font-mono)">${(e.cta_sent||0).toLocaleString('fr-FR')}</td></tr>`).join('')}</tbody></table>`;
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid var(--border);color:var(--muted)"><th style="text-align:left;padding:8px 12px">Date</th><th style="text-align:right;padding:8px 12px">Swipes</th><th style="text-align:right;padding:8px 12px">Messages</th><th style="text-align:right;padding:8px 12px">Matchs</th><th style="text-align:right;padding:8px 12px">Réponses</th><th style="text-align:right;padding:8px 12px">CTA</th></tr></thead><tbody>${filtered.map(e=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''"><td style="padding:8px 12px;font-family:var(--font-mono)">${e.date}</td><td style="padding:8px 12px;text-align:right;color:var(--blue);font-family:var(--font-mono)">${(e.swipes||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--accent);font-family:var(--font-mono)">${(e.messages||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-family:var(--font-mono)">${(e.matches||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:var(--teal);font-family:var(--font-mono)">${(e.replies||0).toLocaleString('fr-FR')}</td><td style="padding:8px 12px;text-align:right;color:#ffb300;font-family:var(--font-mono)">${(e.cta_sent||0).toLocaleString('fr-FR')}</td></tr>`).join('')}</tbody></table>`;
 }
 
 // ── SWIPE ──
@@ -1353,14 +1598,16 @@ async function startSwipe() {
 }
 
 function startSwipePolling() {
+  let pollCount=0;
   swipeInterval=setInterval(async()=>{
-    if(!swipeJobId) return;
+    if(!swipeJobId) return; pollCount++;
     try {
       const r=await apiFetch(`${API}/swipe/status/${swipeJobId}`);
       const d=await r.json();
       if(!d.success) return;
       renderSwipeProgress(d);
-      if(d.status==='done'){ clearInterval(swipeInterval); document.getElementById('btn-start-swipe').disabled=false; toast('Auto-swipe terminé !','success'); await loadStats(); renderSwipeResults(d); refreshMatchCountsSilent(); }
+      if(pollCount%5===0) loadAccountsData();
+      if(d.status==='done'){ clearInterval(swipeInterval); document.getElementById('btn-start-swipe').disabled=false; toast('Auto-swipe terminé !','success'); await loadStats(); renderSwipeResults(d); loadAccountsData(); }
     } catch{}
   },2000);
 }
@@ -1374,7 +1621,7 @@ function renderSwipeProgress(data) {
   if(!existInfo){ el.innerHTML=infoHtml+`<div class="log-box" id="swipe-log-box"><span class="log-info">En attente...</span></div>`; }
   else { existInfo.outerHTML=infoHtml; }
   const logBox=document.getElementById('swipe-log-box');
-  if(logBox&&data.log){ const wasAtBottom=logBox.scrollHeight-logBox.scrollTop<=logBox.clientHeight+50; logBox.innerHTML=data.log.map(l=>`<div class="${l.includes('✅')?'log-ok':l.includes('❌')?'log-err':'log-info'}">${l}</div>`).join('')||'<span class="log-info">En attente...</span>'; if(wasAtBottom) logBox.scrollTop=logBox.scrollHeight; }
+  if(logBox&&data.log){ const wasAtBottom=logBox.scrollHeight-logBox.scrollTop<=logBox.clientHeight+50; logBox.innerHTML=data.log.map(l=>`<div class="${l.includes('✅')?'log-ok':l.includes('❌')?'log-err':l.includes('🌐')?'log-info':'log-info'}">${l}</div>`).join('')||'<span class="log-info">En attente...</span>'; if(wasAtBottom) logBox.scrollTop=logBox.scrollHeight; }
 }
 
 function renderSwipeResults(data) {
@@ -1427,7 +1674,7 @@ function renderDmProgress(data) {
   if(!existInfo){ el.innerHTML=infoHtml+`<div class="log-box" id="dm-log-box"><span class="log-info">En attente...</span></div>`; }
   else { existInfo.outerHTML=infoHtml; }
   const logBox=document.getElementById('dm-log-box');
-  if(logBox&&data.log){ const wasAtBottom=logBox.scrollHeight-logBox.scrollTop<=logBox.clientHeight+50; logBox.innerHTML=data.log.map(l=>`<div class="${l.includes('✅')?'log-ok':l.includes('❌')?'log-err':l.includes('⏭')?'log-skip':'log-info'}">${l}</div>`).join('')||'<span class="log-info">En attente...</span>'; if(wasAtBottom) logBox.scrollTop=logBox.scrollHeight; }
+  if(logBox&&data.log){ const wasAtBottom=logBox.scrollHeight-logBox.scrollTop<=logBox.clientHeight+50; logBox.innerHTML=data.log.map(l=>`<div class="${l.includes('✅')?'log-ok':l.includes('❌')?'log-err':l.includes('⏭')?'log-skip':l.includes('🌐')?'log-info':'log-info'}">${l}</div>`).join('')||'<span class="log-info">En attente...</span>'; if(wasAtBottom) logBox.scrollTop=logBox.scrollHeight; }
 }
 
 function renderDmResults(data) {
@@ -1474,9 +1721,11 @@ function renderAutomationTasks(tasks) {
   el.innerHTML=tasks.map(t=>`<div class="auto-task-card ${t.status==='running'?'running':''}" id="task-${t.id}">
     <div class="task-header"><div><div class="task-name">${t.name}</div></div><span class="task-type-badge">${t.type}</span></div>
     <div class="task-meta">🔁 Toutes les ${t.interval_minutes} min${t.username?` · @${t.username}`:''} ${t.status==='running'?`<span style="color:var(--green);font-weight:600;margin-left:8px">● EN COURS</span>`:''}
-    ${t.next_run_str&&t.next_run_str!=='—'?`<br><span class="task-next">Prochain cycle: ${t.next_run_str}</span>`:''}</div>
+    ${t.next_run_str&&t.next_run_str!=='—'?`<br><span style="color:var(--muted);font-size:11px">Prochain cycle: ${t.next_run_str}</span>`:''}</div>
     <div class="task-actions">
-      ${t.status==='running'?`<button class="btn btn-warning" style="padding:6px 12px;font-size:12px" onclick="stopAutomation('${t.id}')">⏹ Stop</button>`:`<button class="btn btn-success" style="padding:6px 12px;font-size:12px" onclick="startAutomation('${t.id}')">▶ Start</button>`}
+      ${t.status==='running'
+        ?`<button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="stopAutomation('${t.id}')">⏹ Stop</button>`
+        :`<button class="btn btn-success" style="padding:6px 12px;font-size:12px" onclick="startAutomation('${t.id}')">▶ Start</button>`}
       <button class="btn btn-secondary btn-sm" onclick="openAutoLog('${t.id}','${t.name}')">📋 Logs</button>
       <button class="btn btn-danger" onclick="deleteAutomation('${t.id}')">🗑</button>
     </div>
@@ -1490,7 +1739,9 @@ function renderDashboardAutomation(tasks) {
   el.innerHTML=tasks.map(t=>`<div class="dash-auto-row ${t.status==='running'?'running':''}">
     <div class="dash-auto-icon">${typeEmojis[t.type]||'⚡'}</div>
     <div class="dash-auto-info"><div class="dash-auto-name">${t.name}</div><div class="dash-auto-meta"><span class="dash-auto-status-dot ${t.status==='running'?'running':''}"></span>${t.status==='running'?'En cours':'Arrêté'} · ${t.interval_minutes}min</div></div>
-    <div class="dash-auto-actions">${t.status==='running'?`<button class="dash-auto-btn stop" onclick="stopAutomation('${t.id}')">⏹</button>`:`<button class="dash-auto-btn start" onclick="startAutomation('${t.id}')">▶</button>`}</div>
+    <div>${t.status==='running'
+      ?`<button class="dash-auto-btn stop" onclick="stopAutomation('${t.id}')">⏹</button>`
+      :`<button class="dash-auto-btn start" onclick="startAutomation('${t.id}')">▶</button>`}</div>
   </div>`).join('');
 }
 
@@ -1546,12 +1797,12 @@ async function refreshAutoLog() {
     const r=await apiFetch(`${API}/automation/${currentAutoLogTaskId}/status`);
     const d=await r.json();
     const box=document.getElementById('auto-log-box');
-    if(d.log?.length){ const wasAtBottom=box.scrollHeight-box.scrollTop<=box.clientHeight+50; box.innerHTML=d.log.map(l=>`<div class="${l.includes('✅')||l.includes('⚡')?'log-ok':l.includes('❌')?'log-err':l.includes('⏹')||l.includes('🛑')?'log-err':l.includes('⏳')||l.includes('🔁')?'log-warn':'log-info'}">${l}</div>`).join(''); if(wasAtBottom) box.scrollTop=box.scrollHeight; }
+    if(d.log?.length){ const wasAtBottom=box.scrollHeight-box.scrollTop<=box.clientHeight+50; box.innerHTML=d.log.map(l=>`<div class="${l.includes('✅')||l.includes('⚡')?'log-ok':l.includes('❌')?'log-err':l.includes('⏹')||l.includes('🛑')?'log-err':l.includes('⏳')||l.includes('🔁')?'log-warn':l.includes('🌐')?'log-info':'log-info'}">${l}</div>`).join(''); if(wasAtBottom) box.scrollTop=box.scrollHeight; }
     else box.innerHTML='<span class="log-info">Aucun log disponible</span>';
   } catch{ document.getElementById('auto-log-box').innerHTML='<span class="log-err">Erreur chargement logs</span>'; }
 }
 
-// ── PROXY ──
+// ── PROXY GLOBAL ──
 async function loadProxyData() {
   try {
     const r=await apiFetch(`${API}/proxy`);
@@ -1562,8 +1813,8 @@ async function loadProxyData() {
 
 function renderProxyStatus(proxy) {
   const el=document.getElementById('proxy-status');
-  if(!proxy||!proxy.enabled||!proxy.proxy_url){ el.innerHTML='<div class="empty-state">Proxy désactivé</div>'; return; }
-  el.innerHTML=`<div class="account-item"><div class="account-info"><div class="account-name">Proxy actif</div><div class="account-id">${proxy.proxy_url}</div></div><span class="account-badge badge-ok">✓ ACTIF</span></div>`;
+  if(!proxy||!proxy.enabled||!proxy.proxy_url){ el.innerHTML='<div class="empty-state">Proxy global désactivé — les comptes sans proxy dédié n\'utilisent pas de proxy</div>'; return; }
+  el.innerHTML=`<div class="account-item"><div class="account-info"><div class="account-name">Proxy global actif</div><div class="account-id">${proxy.proxy_url}</div></div><span class="account-badge badge-ok">✓ ACTIF</span></div>`;
 }
 
 async function saveProxy() {
@@ -1572,7 +1823,7 @@ async function saveProxy() {
   try {
     const r=await apiFetch(`${API}/proxy`,{method:'POST',body:JSON.stringify({enabled:!!proxy_url,proxy_url,rotation_link})});
     const d=await r.json();
-    if(d.success){ toast('Proxy sauvegardé','success'); renderProxyStatus({enabled:!!proxy_url,proxy_url,rotation_link}); }
+    if(d.success){ toast('Proxy global sauvegardé','success'); renderProxyStatus({enabled:!!proxy_url,proxy_url,rotation_link}); }
   } catch{ toast('Erreur réseau','error'); }
 }
 
@@ -1581,7 +1832,7 @@ async function testProxy() {
   try {
     const r=await apiFetch(`${API}/proxy/test`);
     const d=await r.json();
-    if(d.success) toast(`✅ IP: ${d.ip}`,'success'); else toast('❌ Test échoué','error');
+    if(d.success) toast(`✅ IP globale: ${d.ip}`,'success'); else toast('❌ Test échoué','error');
   } catch{ toast('Erreur réseau','error'); }
 }
 
@@ -1672,7 +1923,14 @@ async function refreshDashboard() {
 }
 
 // ── UI HELPERS ──
-function openModal(id){ document.getElementById(id).classList.add('open'); if(id==='modal-add') setAddTab('paste'); }
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if(id === 'modal-add') {
+    setAddTab('paste');
+    setAddProxyMode('manual');
+    loadPoolCount();
+  }
+}
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
 
