@@ -130,15 +130,20 @@ def get_proxies_for_account(account, user_id="default"):
 # FICHIERS DE DONNÉES
 # ============================================================
 
-ACCOUNTS_FILE      = "tinder_accounts.json"
-PROXIES_FILE       = "user_proxies.json"
-HISTORY_FILE       = "message_history.json"
-STATS_FILE         = "tinder_stats.json"
-STATS_HISTORY_FILE = "tinder_stats_history.json"
-USERS_FILE         = "panel_users.json"
-TAGS_FILE          = "panel_tags.json"
-AUTOMATION_FILE    = "automation_config.json"
-SETTINGS_FILE      = "panel_settings.json"
+DATA_DIR = '/data'
+os.makedirs(DATA_DIR, exist_ok=True)
+
+TOKENS_FILE        = f"{DATA_DIR}/active_tokens.json"
+ACCOUNTS_FILE      = f"{DATA_DIR}/tinder_accounts.json"
+PROXIES_FILE       = f"{DATA_DIR}/user_proxies.json"
+HISTORY_FILE       = f"{DATA_DIR}/message_history.json"
+STATS_FILE         = f"{DATA_DIR}/tinder_stats.json"
+STATS_HISTORY_FILE = f"{DATA_DIR}/tinder_stats_history.json"
+USERS_FILE         = f"{DATA_DIR}/panel_users.json"
+TAGS_FILE          = f"{DATA_DIR}/panel_tags.json"
+AUTOMATION_FILE    = f"{DATA_DIR}/automation_config.json"
+SETTINGS_FILE      = f"{DATA_DIR}/panel_settings.json"
+PROXY_POOL_FILE    = f"{DATA_DIR}/proxy_pool.json"
 
 # --- SETTINGS ---
 
