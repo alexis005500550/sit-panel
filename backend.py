@@ -1343,7 +1343,6 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
 # ============================================================
 
 
-PROXY_POOL_FILE = "proxy_pool.json"
 
 def load_proxy_pool(user_id="default"):
     try:
