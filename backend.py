@@ -38,13 +38,35 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tinderbot-secret-key-change-me-in-prod')
 CORS(app, supports_credentials=True, origins=['*'])
 
-active_tokens = {}
+import threading as _threading
+_tokens_lock = _threading.Lock()
+TOKENS_FILE = "active_tokens.json"
+
+def _load_tokens():
+    try:
+        with open(TOKENS_FILE, 'r') as f:
+            data = json.load(f)
+        now = time.time()
+        return {k: v for k, v in data.items() if now - v.get('_created', now) < 86400}
+    except:
+        return {}
+
+def _save_tokens(tokens):
+    with open(TOKENS_FILE, 'w') as f:
+        json.dump(tokens, f, indent=2)
+
+active_tokens = _load_tokens()  # Chargé au démarrage
 
 def generate_token():
     return secrets.token_hex(32)
 
 def get_token_from_request():
-    return request.headers.get('X-Auth-Token', '') or ''
+    token = request.headers.get('X-Auth-Token', '') or ''
+    if token and token not in active_tokens:
+        # Recharge depuis disque (redémarrage potentiel)
+        fresh = _load_tokens()
+        active_tokens.update(fresh)
+    return token
 
 def require_auth(f):
     from functools import wraps
@@ -1414,7 +1436,10 @@ def login():
     for uid, u in users.items():
         if u['username'] == username and u['password'] == hash_password(password):
             token = generate_token()
-            active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role']}
+            active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role'], '_created': time.time()}
+            with _tokens_lock:
+                _save_tokens(active_tokens)
+
             return jsonify({'success': True, 'token': token, 'username': u['username'], 'role': u['role']})
     return jsonify({'success': False, 'error': 'Identifiants incorrects'}), 401
 
@@ -1423,6 +1448,8 @@ def logout():
     token = get_token_from_request()
     if token in active_tokens:
         del active_tokens[token]
+        with _tokens_lock:
+            _save_tokens(active_tokens)
     return jsonify({'success': True})
 
 @app.route('/api/auth/me', methods=['GET'])
