@@ -2059,4 +2059,4 @@ check_and_reset_stats()
 
 if __name__ == '__main__':
     print("🚀 Backend panel démarré sur http://localhost:5002")
-    app.run(host='0.0.0.0', port=5002, debug=False)
+    app.run(host='0.0.0.0', port=8080, debug=False)
