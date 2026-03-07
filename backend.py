@@ -627,11 +627,20 @@ def tinder_get_messages(account, match_id, proxies=None):
 def tinder_update_bio(account, bio, proxies=None):
     headers = build_headers(account, include_content_type=True)
     try:
-        resp = make_request('POST', 'https://api.gotinder.com/v2/profile/user', 
-                           headers, proxies=proxies, 
-                           json_data={"bio": bio}, timeout=20)
-        return {'success': resp.status_code == 200, 
-                'error': f"HTTP {resp.status_code}" if resp.status_code != 200 else None}
+        # Forcer requests standard avec PySocks pour SOCKS5
+        import requests as req
+        resp = req.post(
+            'https://api.gotinder.com/v2/profile/user',
+            headers=headers,
+            json={"bio": bio},
+            proxies=proxies,
+            timeout=20,
+            verify=False
+        )
+        return {
+            'success': resp.status_code == 200,
+            'error': f"HTTP {resp.status_code}" if resp.status_code != 200 else None
+        }
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
