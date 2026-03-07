@@ -5,3 +5,4 @@ curl-cffi
 requests
 redis
 PySocks==1.7.1
+requests[socks]
