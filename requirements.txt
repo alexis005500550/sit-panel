@@ -4,3 +4,4 @@ gunicorn
 curl-cffi
 requests
 redis
+PySocks==1.7.1
