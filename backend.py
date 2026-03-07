@@ -429,19 +429,44 @@ def build_headers(account, include_content_type=False):
         headers['content-type'] = 'application/json'
     return headers
 
-def make_request(method, url, headers, proxies=None, json_data=None, data=None, timeout=10):
+def make_request(method, url, headers, proxies=None, json_data=None, data=None, timeout=15):
+    # Toujours essayer curl_cffi en premier si disponible
     if CURL_CFFI_AVAILABLE:
         try:
             if method == 'GET':
-                return curl_requests.get(url, headers=headers, proxies=proxies, timeout=timeout, impersonate="safari15_5", verify=False)
+                return curl_requests.get(
+                    url, headers=headers, proxies=proxies,
+                    timeout=timeout, impersonate="safari15_5", verify=False
+                )
             elif method == 'POST':
-                return curl_requests.post(url, headers=headers, json=json_data, data=data, proxies=proxies, timeout=timeout, impersonate="safari15_5", verify=False)
-        except:
-            pass
-    if method == 'GET':
-        return requests.get(url, headers=headers, proxies=proxies, timeout=timeout, verify=False)
-    elif method == 'POST':
-        return requests.post(url, headers=headers, json=json_data, data=data, proxies=proxies, timeout=timeout, verify=False)
+                return curl_requests.post(
+                    url, headers=headers, json=json_data, data=data,
+                    proxies=proxies, timeout=timeout,
+                    impersonate="safari15_5", verify=False
+                )
+        except Exception as e:
+            print(f"[curl_cffi] {method} {url} failed: {e}")
+            # Si curl_cffi échoue avec un proxy, ne pas retry sans proxy
+            if proxies:
+                raise Exception(f"Proxy injoignable: {e}")
+
+    # Fallback requests standard — seulement sans proxy SOCKS5
+    if proxies and any('socks' in str(v).lower() for v in proxies.values()):
+        raise Exception("SOCKS5 proxy requires curl_cffi — install it properly")
+
+    try:
+        if method == 'GET':
+            return requests.get(
+                url, headers=headers, proxies=proxies,
+                timeout=timeout, verify=False
+            )
+        elif method == 'POST':
+            return requests.post(
+                url, headers=headers, json=json_data, data=data,
+                proxies=proxies, timeout=timeout, verify=False
+            )
+    except Exception as e:
+        raise Exception(f"Request failed: {e}")
 
 def generate_content_hash():
     import hashlib, base64, string
@@ -602,8 +627,11 @@ def tinder_get_messages(account, match_id, proxies=None):
 def tinder_update_bio(account, bio, proxies=None):
     headers = build_headers(account, include_content_type=True)
     try:
-        resp = make_request('POST', 'https://api.gotinder.com/v2/profile/user', headers, proxies=proxies, json_data={"bio": bio})
-        return {'success': resp.status_code == 200, 'error': f"HTTP {resp.status_code}" if resp.status_code != 200 else None}
+        resp = make_request('POST', 'https://api.gotinder.com/v2/profile/user', 
+                           headers, proxies=proxies, 
+                           json_data={"bio": bio}, timeout=20)
+        return {'success': resp.status_code == 200, 
+                'error': f"HTTP {resp.status_code}" if resp.status_code != 200 else None}
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
