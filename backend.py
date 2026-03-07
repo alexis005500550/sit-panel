@@ -1771,8 +1771,16 @@ def update_bio(user_id):
     account  = next((a for a in accounts if a['user_id'] == user_id), None)
     if not account:
         return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
+    
     proxies = get_proxies_for_account(account, current_user_id())
-    result  = tinder_update_bio(account, bio, proxies)
+    print(f"[BIO DEBUG] account keys={list(account.keys())}")
+    print(f"[BIO DEBUG] user_id={account.get('user_id')}")
+    print(f"[BIO DEBUG] token present={bool(account.get('token'))}")
+    print(f"[BIO DEBUG] proxies={proxies}")
+    
+    result = tinder_update_bio(account, bio, proxies)
+    print(f"[BIO DEBUG] result={result}")
+    
     if result['success']:
         for a in accounts:
             if a['user_id'] == user_id:
