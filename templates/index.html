@@ -8,18 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #07070d;
-    --surface: #0e0e18;
-    --surface2: #161622;
-    --border: #252538;
-    --accent: #ff3a5e;
-    --accent2: #ff7c4d;
-    --green: #00e676;
-    --blue: #448aff;
-    --purple: #b388ff;
-    --teal: #00bcd4;
-    --text: #e8e8f0;
-    --muted: #5a5a72;
+    --bg: #07070d; --surface: #0e0e18; --surface2: #161622; --border: #252538;
+    --accent: #ff3a5e; --accent2: #ff7c4d; --green: #00e676; --blue: #448aff;
+    --purple: #b388ff; --teal: #00bcd4; --text: #e8e8f0; --muted: #5a5a72;
     --font-mono: 'Geist Mono', 'SF Mono', monospace;
     --font: 'Geist', 'Inter', -apple-system, sans-serif;
   }
@@ -27,7 +18,6 @@
   body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; -webkit-font-smoothing: antialiased; }
   body::before { content:''; position:fixed; top:-30%; left:-10%; width:600px; height:600px; background:radial-gradient(circle, rgba(255,58,94,0.04) 0%, transparent 70%); pointer-events:none; z-index:0; }
   body::after { content:''; position:fixed; bottom:-20%; right:-10%; width:500px; height:500px; background:radial-gradient(circle, rgba(68,138,255,0.04) 0%, transparent 70%); pointer-events:none; z-index:0; }
-
   .sidebar { width:240px; background:linear-gradient(180deg,#0b0b16,#080810); border-right:1px solid rgba(255,58,94,0.1); display:flex; flex-direction:column; position:fixed; height:100vh; z-index:10; box-shadow:6px 0 30px rgba(0,0,0,0.5); }
   .logo { padding:22px 18px 18px; border-bottom:1px solid rgba(255,255,255,0.05); position:relative; overflow:hidden; flex-shrink:0; }
   .logo::before { content:''; position:absolute; top:-60px; left:-40px; width:200px; height:200px; background:radial-gradient(circle, rgba(255,58,94,0.15) 0%, transparent 65%); pointer-events:none; animation:logoGlow 4s ease-in-out infinite; }
@@ -43,7 +33,6 @@
   .logo-name { font-size:16px; font-weight:700; background:linear-gradient(90deg,#fff,#ffe066,#ff9a2e,#ff3a5e,#ffcc00,#fff); background-size:250% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:fireText 3s linear infinite; }
   @keyframes fireText { 0%{background-position:0% center} 100%{background-position:250% center} }
   .logo-version { font-family:var(--font-mono); font-size:10px; letter-spacing:0.8px; color:rgba(255,106,26,0.6); }
-
   nav { padding:10px; flex:1; overflow-y:auto; }
   nav::-webkit-scrollbar { display:none; }
   .nav-section-label { font-size:10px; font-weight:500; letter-spacing:0.8px; color:rgba(255,255,255,0.18); text-transform:uppercase; padding:14px 10px 5px; display:flex; align-items:center; gap:8px; }
@@ -61,8 +50,7 @@
   .nav-dot { margin-left:auto; width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); animation:navDotPulse 2s infinite; display:none; }
   .nav-item.has-activity .nav-dot { display:block; }
   @keyframes navDotPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  [data-nav="dashboard"]{--ni-rgb:255,200,60}[data-nav="accounts"]{--ni-rgb:100,180,255}[data-nav="swipe"]{--ni-rgb:255,58,94}[data-nav="massdm"]{--ni-rgb:100,210,255}[data-nav="automation"]{--ni-rgb:179,136,255}[data-nav="matches"]{--ni-rgb:255,100,150}[data-nav="stats"]{--ni-rgb:0,230,118}[data-nav="proxy"]{--ni-rgb:255,180,60}[data-nav="admin"]{--ni-rgb:255,100,80}
-
+  [data-nav="dashboard"]{--ni-rgb:255,200,60}[data-nav="accounts"]{--ni-rgb:100,180,255}[data-nav="swipe"]{--ni-rgb:255,58,94}[data-nav="massdm"]{--ni-rgb:100,210,255}[data-nav="automation"]{--ni-rgb:179,136,255}[data-nav="matches"]{--ni-rgb:255,100,150}[data-nav="stats"]{--ni-rgb:0,230,118}[data-nav="proxy"]{--ni-rgb:255,180,60}[data-nav="ia-settings"]{--ni-rgb:100,210,200}[data-nav="admin"]{--ni-rgb:255,100,80}
   .server-status { padding:12px 14px; border-top:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.25); flex-shrink:0; }
   .status-pill { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); margin-bottom:8px; }
   .status-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.2); flex-shrink:0; transition:all 0.4s; }
@@ -74,7 +62,6 @@
   .user-name { font-size:12px; font-weight:500; color:rgba(255,255,255,0.4); flex:1; }
   .logout-btn { background:none; border:none; color:rgba(255,255,255,0.18); font-size:11px; font-weight:500; cursor:pointer; padding:4px 6px; border-radius:5px; transition:all 0.15s; font-family:var(--font); }
   .logout-btn:hover { color:var(--accent); }
-
   .main { margin-left:240px; flex:1; padding:32px; max-width:calc(100vw - 240px); position:relative; z-index:1; }
   .page { display:none; }
   .page.active { display:block; animation:pageIn 0.25s ease; }
@@ -82,16 +69,13 @@
   .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; }
   .page-title { font-size:22px; font-weight:600; letter-spacing:-0.3px; }
   .page-sub { font-size:13px; color:var(--muted); margin-top:3px; }
-
   .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; position:relative; overflow:hidden; transition:border-color 0.2s; }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent); }
   .card:hover { border-color:rgba(255,255,255,0.12); }
   .card-title { font-size:11px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
-
   .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
   .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-
   .stat { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; position:relative; overflow:hidden; transition:all 0.25s; cursor:default; }
   .stat::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--accent-color,var(--accent)); opacity:0.8; }
   .stat::after { content:''; position:absolute; bottom:-40px; right:-40px; width:120px; height:120px; background:radial-gradient(circle,var(--accent-color,var(--accent)) 0%,transparent 70%); opacity:0.04; transition:opacity 0.3s; }
@@ -106,7 +90,6 @@
   .stat-delta-badge.neutral { background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid rgba(255,255,255,0.08); }
   .stat-delta { font-size:11px; color:var(--muted); margin-top:4px; }
   @keyframes deltaIn { from{opacity:0;transform:translateY(4px) scale(0.85)} to{opacity:1;transform:translateY(0) scale(1)} }
-
   .form-group { margin-bottom:16px; }
   label { display:block; font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
   input,select,textarea { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-family:var(--font); font-size:13px; outline:none; transition:border-color 0.15s,box-shadow 0.15s; }
@@ -116,7 +99,6 @@
   input[type=range] { padding:0; height:4px; accent-color:var(--accent); cursor:pointer; }
   .range-label { display:flex; justify-content:space-between; align-items:center; }
   .range-val { font-family:var(--font-mono); font-size:13px; color:var(--accent); font-weight:600; }
-
   .btn { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:8px; border:none; font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.18s; position:relative; overflow:hidden; letter-spacing:0.1px; }
   .btn::after { content:''; position:absolute; inset:0; background:rgba(255,255,255,0.07); opacity:0; transition:opacity 0.15s; border-radius:inherit; }
   .btn:hover::after { opacity:1; }
@@ -126,11 +108,12 @@
   .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
   .btn-secondary:hover { border-color:rgba(255,255,255,0.2); background:#202030; }
   .btn-success { background:rgba(0,230,118,0.12); color:var(--green); border:1px solid rgba(0,230,118,0.3); }
+  .btn-teal { background:rgba(0,188,212,0.12); color:var(--teal); border:1px solid rgba(0,188,212,0.3); }
+  .btn-teal:hover { background:rgba(0,188,212,0.22); }
   .btn-danger { background:rgba(255,58,94,0.1); color:var(--accent); border:1px solid rgba(255,58,94,0.3); padding:6px 12px; font-size:12px; }
   .btn-danger:hover { background:rgba(255,58,94,0.2); }
   .btn-sm { padding:6px 12px; font-size:12px; }
   .btn-full { width:100%; justify-content:center; }
-
   .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; }
   .profile-card { position:relative; border-radius:20px; overflow:hidden; aspect-ratio:3/4; cursor:pointer; box-shadow:0 8px 40px rgba(0,0,0,0.6); transition:transform 0.25s,box-shadow 0.25s; background:var(--surface2); }
   .profile-card:hover { transform:translateY(-6px) scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.8); }
@@ -162,7 +145,6 @@
   .profile-card-btn-proxy.active { background:rgba(68,138,255,0.35); border-color:rgba(68,138,255,0.7); box-shadow:0 0 12px rgba(68,138,255,0.4); }
   .profile-card-btn-del { background:rgba(255,58,94,0.2); color:var(--accent); border:1px solid rgba(255,58,94,0.35); flex:0 0 auto; padding:8px 12px; }
   .profile-card-btn-del:hover { background:rgba(255,58,94,0.4); }
-
   .proxy-mode-toggle { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:16px; }
   .proxy-mode-btn { flex:1; padding:8px; border-radius:7px; text-align:center; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:all 0.18s; border:none; background:none; font-family:var(--font); }
   .proxy-mode-btn.active { background:linear-gradient(135deg,var(--blue),#2a6adf); color:white; box-shadow:0 4px 12px rgba(68,138,255,0.3); }
@@ -172,7 +154,6 @@
   .proxy-ip-dot.fail { background:var(--accent); }
   .proxy-ip-text { font-family:var(--font-mono); font-size:12px; font-weight:600; }
   .proxy-ip-label { font-size:11px; color:var(--muted); }
-
   .account-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; transition:all 0.15s; }
   .account-item:hover { border-color:rgba(255,58,94,0.4); transform:translateX(2px); }
   .account-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:white; flex-shrink:0; }
@@ -182,32 +163,23 @@
   .account-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
   .badge-ok { background:rgba(0,230,118,0.12); color:var(--green); }
   .account-checkbox { width:18px; height:18px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
-
   .progress-bar { height:6px; background:var(--surface2); border-radius:10px; overflow:hidden; margin-top:6px; }
   .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2),var(--purple)); background-size:200% 100%; border-radius:10px; transition:width 0.5s; animation:progressShimmer 2s linear infinite; }
   @keyframes progressShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
   .log-box { background:#050508; border:1px solid var(--border); border-radius:10px; padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8; height:340px; overflow-y:scroll; color:var(--muted); }
   .log-box::-webkit-scrollbar { width:4px; }
   .log-box::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-  .log-ok { color:var(--green) !important; }
-  .log-err { color:var(--accent) !important; }
-  .log-skip { color:var(--purple) !important; }
-  .log-info { color:var(--blue) !important; }
-  .log-warn { color:#ffb300 !important; }
-
+  .log-ok { color:var(--green) !important; } .log-err { color:var(--accent) !important; } .log-skip { color:var(--purple) !important; } .log-info { color:var(--blue) !important; } .log-warn { color:#ffb300 !important; }
   .tabs { display:flex; gap:4px; margin-bottom:20px; }
   .tab { padding:8px 16px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); background:transparent; border:1px solid transparent; transition:all 0.15s; font-family:var(--font); }
   .tab:hover { color:var(--text); background:var(--surface2); }
   .tab.active { background:rgba(255,58,94,0.12); color:var(--accent); border-color:rgba(255,58,94,0.3); }
-
   #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
   .toast { padding:12px 18px; border-radius:10px; font-size:13px; font-weight:500; font-family:var(--font); display:flex; align-items:center; gap:10px; animation:toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1); min-width:260px; max-width:360px; backdrop-filter:blur(10px); }
   @keyframes toastIn { from{transform:translateX(100%) scale(0.8);opacity:0} to{transform:translateX(0) scale(1);opacity:1} }
   .toast-success { background:rgba(13,42,26,0.95); border:1px solid rgba(0,230,118,0.4); color:var(--green); }
   .toast-error { background:rgba(42,13,21,0.95); border:1px solid rgba(255,58,94,0.4); color:var(--accent); }
   .toast-info { background:rgba(13,26,42,0.95); border:1px solid rgba(68,138,255,0.4); color:var(--blue); }
-
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(8px); }
   .modal-overlay.open { display:flex; }
   .modal { background:var(--surface); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:28px; width:480px; max-width:95vw; animation:modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1); position:relative; box-shadow:0 32px 80px rgba(0,0,0,0.8); max-height:90vh; overflow-y:auto; }
@@ -216,11 +188,9 @@
   .modal-title { font-size:15px; font-weight:600; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; }
   .modal-close { cursor:pointer; color:var(--muted); font-size:18px; background:none; border:none; line-height:1; transition:color 0.15s; padding:4px; }
   .modal-close:hover { color:var(--text); }
-
   .scroll-area { max-height:340px; overflow-y:auto; }
   .scroll-area::-webkit-scrollbar { width:4px; }
   .scroll-area::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
   .tag-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:600; white-space:nowrap; }
   .tag-selector { display:flex; flex-wrap:wrap; gap:6px; padding:10px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; min-height:44px; }
   .tag-selector-item { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.15s; border:2px solid transparent; opacity:0.45; }
@@ -232,16 +202,16 @@
   .color-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform 0.12s,border-color 0.12s; }
   .color-swatch:hover { transform:scale(1.25); }
   .color-swatch.active { border-color:white; transform:scale(1.18); }
-
   .mode-toggle { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:20px; }
   .mode-btn { flex:1; padding:8px; border-radius:7px; text-align:center; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:all 0.18s; border:none; background:none; font-family:var(--font); }
   .mode-btn.active { background:linear-gradient(135deg,var(--accent),#d42e50); color:white; box-shadow:0 4px 12px rgba(255,58,94,0.3); }
-
+  .lang-toggle { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; }
+  .lang-btn { flex:1; padding:8px 14px; border-radius:7px; text-align:center; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:all 0.18s; border:none; background:none; font-family:var(--font); display:flex; align-items:center; justify-content:center; gap:6px; }
+  .lang-btn.active { background:linear-gradient(135deg,var(--teal),#0097a7); color:white; box-shadow:0 4px 12px rgba(0,188,212,0.3); }
   .sep { height:1px; background:var(--border); margin:20px 0; }
   .select-all-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border-radius:8px; margin-bottom:12px; font-size:12px; color:var(--muted); }
   .empty-state { text-align:center; padding:40px; color:var(--muted); font-size:13px; }
   .empty-state .icon { font-size:32px; margin-bottom:10px; }
-
   .auto-task-card { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; transition:all 0.2s; position:relative; overflow:hidden; }
   .auto-task-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--muted); border-radius:0 2px 2px 0; transition:background 0.3s; }
   .auto-task-card.running::before { background:var(--green); }
@@ -250,9 +220,9 @@
   .task-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
   .task-name { font-weight:600; font-size:14px; }
   .task-type-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:rgba(68,138,255,0.12); color:var(--blue); border:1px solid rgba(68,138,255,0.25); }
+  .task-lang-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:rgba(0,188,212,0.12); color:var(--teal); border:1px solid rgba(0,188,212,0.25); margin-left:6px; }
   .task-meta { font-size:12px; color:var(--muted); margin-bottom:10px; }
   .task-actions { display:flex; gap:8px; }
-
   .chart-container { position:relative; height:280px; width:100%; }
   .stats-period-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
   .period-tab { padding:6px 14px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; color:var(--muted); background:var(--surface2); border:1px solid var(--border); transition:all 0.15s; }
@@ -266,7 +236,6 @@
   .stat-big-sub { font-size:11px; color:var(--muted); margin-top:4px; }
   .date-range-row { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
   .date-range-row input[type=date] { width:auto; padding:8px 12px; font-size:12px; }
-
   .dash-auto-row { display:flex; align-items:center; gap:12px; padding:11px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; transition:all 0.2s; position:relative; overflow:hidden; }
   .dash-auto-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--muted); border-radius:0 2px 2px 0; transition:background 0.3s; }
   .dash-auto-row.running::before { background:var(--green); box-shadow:0 0 8px rgba(0,230,118,0.6); }
@@ -283,7 +252,6 @@
   .dash-auto-btn.start:hover { background:rgba(0,230,118,0.25); transform:scale(1.1); }
   .dash-auto-btn.stop { background:rgba(255,179,0,0.12); color:#ffb300; border:1px solid rgba(255,179,0,0.3); }
   .dash-auto-btn.stop:hover { background:rgba(255,179,0,0.25); transform:scale(1.1); }
-
   .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
   .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
   .toggle-track { position:absolute; inset:0; border-radius:24px; background:var(--border); transition:background 0.2s; }
@@ -291,14 +259,13 @@
   .toggle-switch input:checked ~ .toggle-track { background:var(--accent); }
   .toggle-switch input:checked ~ .toggle-thumb { transform:translateX(20px); }
   .toggle-switch.blue input:checked ~ .toggle-track { background:var(--blue); }
-
+  .toggle-switch.teal input:checked ~ .toggle-track { background:var(--teal); }
   .result-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; }
   .result-name { font-weight:600; font-size:14px; margin-bottom:8px; }
   .result-stats { display:flex; gap:16px; flex-wrap:wrap; }
   .result-stat { display:flex; flex-direction:column; align-items:center; }
   .result-stat-val { font-family:var(--font-mono); font-size:18px; font-weight:700; }
   .result-stat-lbl { font-size:10px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
-
   .match-card { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; transition:all 0.15s; }
   .match-card:hover { border-color:rgba(255,58,94,0.3); transform:translateX(3px); }
   .match-photo { width:44px; height:44px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,var(--surface),var(--border)); flex-shrink:0; }
@@ -306,13 +273,19 @@
   .match-name { font-weight:600; font-size:14px; }
   .match-account { font-size:11px; color:var(--muted); margin-top:2px; }
   .match-msg { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-  /* Pool styles */
   .pool-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-family:var(--font-mono); font-size:11px; }
   .pool-item-num { color:var(--muted); min-width:24px; font-size:10px; }
   .pool-item-url { color:var(--blue); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pool-item-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:0 4px; line-height:1; transition:color 0.15s; }
   .pool-item-del:hover { color:var(--accent); }
+  .ia-settings-section { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px; margin-bottom:16px; position:relative; overflow:hidden; }
+  .ia-settings-section::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--teal),var(--purple)); opacity:0.7; }
+  .ia-key-input-row { display:flex; gap:10px; align-items:flex-end; }
+  .ia-key-input-row input { font-family:var(--font-mono); font-size:12px; letter-spacing:0.5px; }
+  .ia-key-status { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:8px; font-size:12px; font-weight:500; margin-top:10px; }
+  .ia-key-status.ok { background:rgba(0,230,118,0.08); border:1px solid rgba(0,230,118,0.25); color:var(--green); }
+  .ia-key-status.missing { background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.25); color:#ffb300; }
+  .ia-key-status.error { background:rgba(255,58,94,0.08); border:1px solid rgba(255,58,94,0.25); color:var(--accent); }
 </style>
 </head>
 <body>
@@ -333,70 +306,32 @@
 
 <!-- APP SHELL -->
 <div id="app-shell" style="display:none;width:100%;min-height:100vh;">
-
 <aside class="sidebar">
   <div class="logo">
     <div class="logo-inner">
       <div class="logo-flame"><img src="https://cdn-icons-png.flaticon.com/512/2582/2582623.png" style="width:22px;height:22px;object-fit:contain;filter:brightness(1.1)"></div>
-      <div class="logo-texts">
-        <div class="logo-name">TinderBot</div>
-        <div class="logo-version">by ATO x Alexis</div>
-      </div>
+      <div class="logo-texts"><div class="logo-name">TinderBot</div><div class="logo-version">by ATO x Alexis</div></div>
     </div>
   </div>
   <nav>
     <div class="nav-section-label">Général</div>
-    <div class="nav-item active" data-nav="dashboard" onclick="showPage('dashboard')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-      <span class="nav-label">Dashboard</span>
-    </div>
-    <div class="nav-item" data-nav="accounts" onclick="showPage('accounts')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div>
-      <span class="nav-label">Comptes</span>
-    </div>
+    <div class="nav-item active" data-nav="dashboard" onclick="showPage('dashboard')"><div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div><span class="nav-label">Dashboard</span></div>
+    <div class="nav-item" data-nav="accounts" onclick="showPage('accounts')"><div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div><span class="nav-label">Comptes</span></div>
     <div class="nav-section-label">Actions</div>
-    <div class="nav-item" data-nav="swipe" onclick="showPage('swipe')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></div>
-      <span class="nav-label">Auto-Swipe</span>
-    </div>
-    <div class="nav-item" data-nav="massdm" onclick="showPage('massdm')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/></svg></div>
-      <span class="nav-label">Mass DM</span>
-    </div>
-    <div class="nav-item" data-nav="automation" id="nav-automation" onclick="showPage('automation')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
-      <span class="nav-label">Automatisation</span>
-      <div class="nav-dot"></div>
-    </div>
-    <div class="nav-item" data-nav="matches" onclick="showPage('matches')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-      <span class="nav-label">Matchs</span>
-    </div>
+    <div class="nav-item" data-nav="swipe" onclick="showPage('swipe')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></div><span class="nav-label">Auto-Swipe</span></div>
+    <div class="nav-item" data-nav="massdm" onclick="showPage('massdm')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/></svg></div><span class="nav-label">Mass DM</span></div>
+    <div class="nav-item" data-nav="automation" id="nav-automation" onclick="showPage('automation')"><div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div><span class="nav-label">Automatisation</span><div class="nav-dot"></div></div>
+    <div class="nav-item" data-nav="matches" onclick="showPage('matches')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><span class="nav-label">Matchs</span></div>
     <div class="nav-section-label">Analytics</div>
-    <div class="nav-item" data-nav="stats" onclick="showPage('stats')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div>
-      <span class="nav-label">Statistiques</span>
-    </div>
+    <div class="nav-item" data-nav="stats" onclick="showPage('stats')"><div class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div><span class="nav-label">Statistiques</span></div>
     <div class="nav-section-label">Config</div>
-    <div class="nav-item" data-nav="proxy" onclick="showPage('proxy')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-      <span class="nav-label">Proxy Global</span>
-    </div>
-    <div class="nav-item" data-nav="admin" id="nav-admin" style="display:none" onclick="showPage('admin')">
-      <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-      <span class="nav-label">Admin</span>
-    </div>
+    <div class="nav-item" data-nav="proxy" onclick="showPage('proxy')"><div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><span class="nav-label">Proxy Global</span></div>
+    <div class="nav-item" data-nav="ia-settings" onclick="showPage('ia-settings')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><circle cx="12" cy="12" r="3"/></svg></div><span class="nav-label">Paramètres IA</span></div>
+    <div class="nav-item" data-nav="admin" id="nav-admin" style="display:none" onclick="showPage('admin')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-label">Admin</span></div>
   </nav>
   <div class="server-status">
-    <div class="status-pill">
-      <div class="status-dot" id="server-dot"></div>
-      <span class="status-text" id="server-label">Connexion...</span>
-    </div>
-    <div class="user-bar">
-      <div class="user-ava" id="user-ava-letter">?</div>
-      <span class="user-name" id="user-label"></span>
-      <button class="logout-btn" onclick="logout()">EXIT →</button>
-    </div>
+    <div class="status-pill"><div class="status-dot" id="server-dot"></div><span class="status-text" id="server-label">Connexion...</span></div>
+    <div class="user-bar"><div class="user-ava" id="user-ava-letter">?</div><span class="user-name" id="user-label"></span><button class="logout-btn" onclick="logout()">EXIT →</button></div>
   </div>
 </aside>
 
@@ -404,10 +339,7 @@
 
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-  <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub">Vue d'ensemble</div></div>
-    <button class="btn btn-secondary btn-sm" onclick="refreshDashboard()">↻ Refresh</button>
-  </div>
+  <div class="page-header"><div><div class="page-title">Dashboard</div><div class="page-sub">Vue d'ensemble</div></div><button class="btn btn-secondary btn-sm" onclick="refreshDashboard()">↻ Refresh</button></div>
   <div class="grid-4" style="margin-bottom:12px">
     <div class="stat" style="--accent-color:var(--accent)"><div class="stat-label">Comptes</div><div class="stat-value-row"><div class="stat-value" id="dash-accounts">—</div></div></div>
     <div class="stat" style="--accent-color:var(--blue)"><div class="stat-label">Swipes</div><div class="stat-value-row"><div class="stat-value" id="dash-swipes">—</div><div id="delta-swipes"></div></div><div class="stat-delta" id="delta-swipes-label"></div></div>
@@ -419,31 +351,14 @@
     <div class="stat" style="--accent-color:#ffb300"><div class="stat-label">CTA envoyés</div><div class="stat-value-row"><div class="stat-value" id="dash-cta">—</div><div id="delta-cta"></div></div><div class="stat-delta" id="delta-cta-label"></div></div>
   </div>
   <div class="grid-2">
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:0">🤖 Mes automatisations</div>
-        <button class="btn btn-secondary btn-sm" onclick="showPage('automation')" style="font-size:11px;padding:5px 10px">Voir tout →</button>
-      </div>
-      <div id="dash-automation-list"><div class="empty-state"><div class="icon">🤖</div>Aucune automatisation</div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Actions rapides</div>
-      <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="showPage('swipe')">⚡ Lancer Auto-Swipe</button>
-      <button class="btn btn-secondary btn-full" style="margin-bottom:10px" onclick="showPage('massdm')">💬 Lancer Mass DM</button>
-      <button class="btn btn-secondary btn-full" onclick="showPage('accounts')">➕ Ajouter un compte</button>
-    </div>
+    <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><div class="card-title" style="margin-bottom:0">🤖 Mes automatisations</div><button class="btn btn-secondary btn-sm" onclick="showPage('automation')" style="font-size:11px;padding:5px 10px">Voir tout →</button></div><div id="dash-automation-list"><div class="empty-state"><div class="icon">🤖</div>Aucune automatisation</div></div></div>
+    <div class="card"><div class="card-title">Actions rapides</div><button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="showPage('swipe')">⚡ Lancer Auto-Swipe</button><button class="btn btn-secondary btn-full" style="margin-bottom:10px" onclick="showPage('massdm')">💬 Lancer Mass DM</button><button class="btn btn-secondary btn-full" onclick="showPage('accounts')">➕ Ajouter un compte</button></div>
   </div>
 </div>
 
 <!-- ACCOUNTS -->
 <div class="page" id="page-accounts">
-  <div class="page-header">
-    <div><div class="page-title">Comptes Tinder</div><div class="page-sub">Gérer tes comptes — chaque compte a son propre proxy IP</div></div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-account-settings')" title="Paramètres comptes" style="padding:6px 10px;font-size:15px">⚙️</button>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-add')">➕ Ajouter</button>
-    </div>
-  </div>
+  <div class="page-header"><div><div class="page-title">Comptes Tinder</div><div class="page-sub">Gérer tes comptes — chaque compte a son propre proxy IP</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary btn-sm" onclick="openModal('modal-account-settings')" style="padding:6px 10px;font-size:15px">⚙️</button><button class="btn btn-primary btn-sm" onclick="openModal('modal-add')">➕ Ajouter</button></div></div>
   <div id="accounts-list"><div class="empty-state"><div class="icon">👤</div>Aucun compte enregistré</div></div>
 </div>
 
@@ -454,16 +369,8 @@
     <div>
       <div class="card">
         <div class="card-title">Configuration</div>
-        <div class="mode-toggle">
-          <button class="mode-btn active" id="mode-basic" onclick="setSwipeMode('basic')">🔄 Basique</button>
-          <button class="mode-btn" id="mode-forcematch" onclick="setSwipeMode('forcematch')">💎 ForceMatch</button>
-        </div>
-        <div id="parallel-option" style="display:none;margin-bottom:16px">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 14px;background:rgba(255,58,94,0.06);border:1px solid rgba(255,58,94,0.2);border-radius:8px;">
-            <input type="checkbox" id="swipe-parallel" style="width:auto;accent-color:var(--accent)">
-            <div><div style="font-size:11px;font-weight:600;color:var(--accent)">⚡ Mode simultané</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tous les comptes en même temps</div></div>
-          </label>
-        </div>
+        <div class="mode-toggle"><button class="mode-btn active" id="mode-basic" onclick="setSwipeMode('basic')">🔄 Basique</button><button class="mode-btn" id="mode-forcematch" onclick="setSwipeMode('forcematch')">💎 ForceMatch</button></div>
+        <div id="parallel-option" style="display:none;margin-bottom:16px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 14px;background:rgba(255,58,94,0.06);border:1px solid rgba(255,58,94,0.2);border-radius:8px;"><input type="checkbox" id="swipe-parallel" style="width:auto;accent-color:var(--accent)"><div><div style="font-size:11px;font-weight:600;color:var(--accent)">⚡ Mode simultané</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tous les comptes en même temps</div></div></label></div>
         <div class="form-group"><div class="range-label"><label>Swipes par compte</label><span class="range-val" id="swipe-count-val">50</span></div><input type="range" id="swipe-count" min="5" max="300" value="50" oninput="document.getElementById('swipe-count-val').textContent=this.value"></div>
         <div class="form-group"><div class="range-label"><label>% de Likes</label><span class="range-val" id="like-pct-val">80%</span></div><input type="range" id="like-pct" min="0" max="100" value="80" oninput="document.getElementById('like-pct-val').textContent=this.value+'%'"></div>
         <div class="sep"></div>
@@ -487,12 +394,14 @@
     <div>
       <div class="card">
         <div class="card-title">Configuration</div>
-        <div class="mode-toggle">
-          <button class="mode-btn active" id="dm-mode-massdm" onclick="setDmMode('massdm')">💬 Mass DM</button>
-          <button class="mode-btn" id="dm-mode-chatting" onclick="setDmMode('chatting')">🤖 Chatting IA</button>
-        </div>
+        <div class="mode-toggle"><button class="mode-btn active" id="dm-mode-massdm" onclick="setDmMode('massdm')">💬 Mass DM</button><button class="mode-btn" id="dm-mode-chatting" onclick="setDmMode('chatting')">🤖 Chatting IA</button></div>
         <div class="form-group"><label>Ton username</label><input type="text" id="dm-username" placeholder="ex: alexis_test"></div>
         <div class="form-group"><label>Réseau social</label><input type="text" id="dm-social" value="Instagram"></div>
+        <div id="dm-lang-section" style="display:none;margin-bottom:16px">
+          <label style="margin-bottom:8px">Langue des réponses IA</label>
+          <div class="lang-toggle"><button class="lang-btn active" id="dm-lang-fr" onclick="setDmLanguage('fr')">🇫🇷 Français</button><button class="lang-btn" id="dm-lang-en" onclick="setDmLanguage('en')">🇬🇧 English</button></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px">L'IA génèrera ses réponses dans la langue sélectionnée</div>
+        </div>
         <div id="dm-chatting-info" style="display:none" class="card"><div style="font-size:12px;color:var(--purple)">🤖 Mode IA activé — Réponses contextuelles générées automatiquement.</div></div>
         <div class="sep"></div>
         <div class="card-title">Comptes à utiliser</div>
@@ -534,18 +443,12 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div class="card-title" style="margin-bottom:0">📈 Évolution</div>
       <div class="stats-period-tabs">
-        <div class="period-tab" onclick="setStatsPeriod('3d',this)">3j</div>
-        <div class="period-tab" onclick="setStatsPeriod('5d',this)">5j</div>
-        <div class="period-tab active" onclick="setStatsPeriod('7d',this)">7j</div>
-        <div class="period-tab" onclick="setStatsPeriod('30d',this)">30j</div>
-        <div class="period-tab" onclick="setStatsPeriod('all',this)">Tout</div>
-        <div class="period-tab" onclick="setStatsPeriod('custom',this)">Perso</div>
+        <div class="period-tab" onclick="setStatsPeriod('3d',this)">3j</div><div class="period-tab" onclick="setStatsPeriod('5d',this)">5j</div>
+        <div class="period-tab active" onclick="setStatsPeriod('7d',this)">7j</div><div class="period-tab" onclick="setStatsPeriod('30d',this)">30j</div>
+        <div class="period-tab" onclick="setStatsPeriod('all',this)">Tout</div><div class="period-tab" onclick="setStatsPeriod('custom',this)">Perso</div>
       </div>
     </div>
-    <div id="stats-date-range" style="display:none" class="date-range-row">
-      <input type="date" id="stats-from" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" id="stats-to" style="width:auto">
-      <button class="btn btn-secondary btn-sm" onclick="applyCustomRange()">Appliquer</button>
-    </div>
+    <div id="stats-date-range" style="display:none" class="date-range-row"><input type="date" id="stats-from" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" id="stats-to" style="width:auto"><button class="btn btn-secondary btn-sm" onclick="applyCustomRange()">Appliquer</button></div>
     <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:12px;color:var(--text)"><input type="checkbox" id="chart-swipes" checked style="width:auto;accent-color:var(--blue)"> <span style="color:var(--blue);font-weight:600">Swipes</span></label>
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:12px;color:var(--text)"><input type="checkbox" id="chart-messages" checked style="width:auto;accent-color:var(--accent)"> <span style="color:var(--accent);font-weight:600">Messages</span></label>
@@ -564,54 +467,54 @@
   <div class="grid-2">
     <div class="card">
       <div class="card-title">Proxy global (fallback)</div>
-      <div style="padding:12px 14px;background:rgba(255,179,0,0.06);border:1px solid rgba(255,179,0,0.2);border-radius:8px;font-size:12px;color:rgba(255,179,0,0.8);margin-bottom:16px;line-height:1.5;">
-        💡 Utilisé en <strong>fallback</strong> pour les comptes sans proxy dédié.
-      </div>
+      <div style="padding:12px 14px;background:rgba(255,179,0,0.06);border:1px solid rgba(255,179,0,0.2);border-radius:8px;font-size:12px;color:rgba(255,179,0,0.8);margin-bottom:16px;line-height:1.5;">💡 Utilisé en <strong>fallback</strong> pour les comptes sans proxy dédié.</div>
       <div class="form-group"><label>URL du proxy (fallback)</label><input type="text" id="proxy-url" placeholder="socks5://user:pass@ip:port"></div>
       <div class="form-group"><label>Lien de rotation d'IP (optionnel)</label><input type="text" id="proxy-rotation" placeholder="https://..."></div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="saveProxy()">💾 Sauvegarder</button>
-        <button class="btn btn-secondary" onclick="testProxy()">🧪 Tester</button>
-        <button class="btn btn-secondary" onclick="rotateProxy()">🔄 Rotation</button>
-      </div>
+      <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="saveProxy()">💾 Sauvegarder</button><button class="btn btn-secondary" onclick="testProxy()">🧪 Tester</button><button class="btn btn-secondary" onclick="rotateProxy()">🔄 Rotation</button></div>
     </div>
     <div class="card"><div class="card-title">Statut proxy global</div><div id="proxy-status"><div class="empty-state">Charge la config pour voir le statut</div></div></div>
   </div>
-
-  <!-- POOL DE PROXIES -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">🎱 Pool de proxies résidentiels</div>
-        <div style="font-size:12px;color:var(--muted)">Assignation automatique à l'import d'un compte — chaque proxy est utilisé une seule fois</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="background:rgba(68,138,255,0.12);border:1px solid rgba(68,138,255,0.3);border-radius:20px;padding:5px 16px;font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--blue)" id="pool-count-badge">0 proxies</div>
-        <button class="btn btn-danger btn-sm" onclick="clearProxyPool()">🗑 Vider</button>
-      </div>
+      <div><div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">🎱 Pool de proxies résidentiels</div><div style="font-size:12px;color:var(--muted)">Assignation automatique à l'import d'un compte</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(68,138,255,0.12);border:1px solid rgba(68,138,255,0.3);border-radius:20px;padding:5px 16px;font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--blue)" id="pool-count-badge">0 proxies</div><button class="btn btn-danger btn-sm" onclick="clearProxyPool()">🗑 Vider</button></div>
     </div>
-
     <div class="grid-2" style="margin-bottom:16px">
-      <div>
-        <div class="form-group">
-          <label>Colle tes proxies (un par ligne)</label>
-          <textarea id="pool-input" rows="8" placeholder="user:pass@host:port&#10;user:pass@host:port&#10;socks5://user:pass@host:port&#10;..."></textarea>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" onclick="saveProxyPool()" style="flex:1">💾 Remplacer le pool</button>
-          <button class="btn btn-secondary" onclick="addToProxyPool()" style="flex:1">➕ Ajouter au pool</button>
-        </div>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">Proxies dans le pool</div>
-        <div id="pool-list-preview" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
-          <div class="empty-state" style="padding:20px">Pool vide</div>
-        </div>
-      </div>
+      <div><div class="form-group"><label>Colle tes proxies (un par ligne)</label><textarea id="pool-input" rows="8" placeholder="user:pass@host:port&#10;socks5://user:pass@host:port"></textarea></div><div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProxyPool()" style="flex:1">💾 Remplacer</button><button class="btn btn-secondary" onclick="addToProxyPool()" style="flex:1">➕ Ajouter</button></div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">Proxies dans le pool</div><div id="pool-list-preview" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"><div class="empty-state" style="padding:20px">Pool vide</div></div></div>
     </div>
+  </div>
+</div>
 
-    <div style="padding:12px 14px;background:rgba(68,138,255,0.06);border:1px solid rgba(68,138,255,0.15);border-radius:10px;font-size:12px;color:rgba(68,138,255,0.8);line-height:1.6;">
-      <strong>Comment ça marche :</strong> Quand tu importes un compte et sélectionnes "🎱 Depuis le pool", un proxy est automatiquement pris dans la liste et assigné au compte. Ce proxy est ensuite retiré du pool pour ne pas être réutilisé.
+<!-- PARAMÈTRES IA -->
+<div class="page" id="page-ia-settings">
+  <div class="page-header"><div><div class="page-title">⚙️ Paramètres IA</div><div class="page-sub">Configuration de l'IA pour le Chatting automatique</div></div></div>
+  <div class="ia-settings-section">
+    <div class="card-title">🔑 Clé API OpenAI</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">La clé est stockée de façon sécurisée côté serveur et ne sera jamais affichée en clair. Elle est utilisée uniquement pour le mode <strong style="color:var(--purple)">Chatting IA</strong>.</div>
+    <div id="ia-key-status-display"></div>
+    <div class="form-group" style="margin-top:14px">
+      <label>Nouvelle clé OpenAI</label>
+      <div class="ia-key-input-row"><input type="password" id="ia-openai-key" placeholder="sk-proj-..." autocomplete="off"><button class="btn btn-primary btn-sm" onclick="saveOpenAIKey()" style="white-space:nowrap">💾 Sauver</button><button class="btn btn-secondary btn-sm" onclick="testOpenAIKey()" style="white-space:nowrap">🧪 Tester</button></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"><button class="btn btn-danger btn-sm" onclick="clearOpenAIKey()">🗑 Supprimer la clé</button></div>
+    <div id="ia-test-result" style="display:none;margin-top:12px"></div>
+  </div>
+  <div class="ia-settings-section" style="margin-top:0">
+    <div class="card-title">🌐 Langue par défaut du Chatting IA</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Langue utilisée par défaut lors du lancement du Chatting IA. Tu peux aussi la choisir directement avant de lancer.</div>
+    <div style="max-width:320px"><div class="lang-toggle" id="global-lang-toggle"><button class="lang-btn active" id="global-lang-fr" onclick="setGlobalLanguage('fr')">🇫🇷 Français</button><button class="lang-btn" id="global-lang-en" onclick="setGlobalLanguage('en')">🇬🇧 English</button></div></div>
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(0,188,212,0.06);border:1px solid rgba(0,188,212,0.2);border-radius:8px;font-size:12px;color:rgba(0,188,212,0.9);line-height:1.6;">
+      <strong>🇫🇷 Français :</strong> L'IA répond comme Sarah, étudiante française, style SMS décontracté.<br>
+      <strong>🇬🇧 English :</strong> L'IA répond comme Sarah in English, casual SMS style.
+    </div>
+    <div style="margin-top:12px"><button class="btn btn-teal" onclick="saveGlobalLanguage()">💾 Sauvegarder la langue</button></div>
+  </div>
+  <div class="ia-settings-section" style="margin-top:0">
+    <div class="card-title">🧠 Modèle IA</div>
+    <div style="padding:12px 14px;background:rgba(179,136,255,0.06);border:1px solid rgba(179,136,255,0.2);border-radius:8px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:28px">🤖</div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--purple)">GPT-4.1 Mini</div><div style="font-size:11px;color:var(--muted);margin-top:3px">Modèle rapide et efficace — idéal rapport qualité/coût</div></div>
     </div>
   </div>
 </div>
@@ -620,200 +523,99 @@
 <div class="page" id="page-admin">
   <div class="page-header"><div><div class="page-title">Administration</div></div><button class="btn btn-primary btn-sm" onclick="openModal('modal-create-user')">➕ Créer un accès</button></div>
   <div class="grid-2" style="margin-bottom:16px">
-    <div class="card">
-      <div class="card-title">Utilisateurs du panel</div>
-      <div id="admin-users-list"><div class="empty-state">Chargement...</div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Mon compte</div>
-      <div class="form-group"><label>Ancien mot de passe</label><input type="password" id="cp-old" placeholder="••••••••"></div>
-      <div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="cp-new" placeholder="••••••••"></div>
-      <button class="btn btn-primary" onclick="changePassword()">🔑 Changer le mot de passe</button>
-    </div>
+    <div class="card"><div class="card-title">Utilisateurs du panel</div><div id="admin-users-list"><div class="empty-state">Chargement...</div></div></div>
+    <div class="card"><div class="card-title">Mon compte</div><div class="form-group"><label>Ancien mot de passe</label><input type="password" id="cp-old" placeholder="••••••••"></div><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="cp-new" placeholder="••••••••"></div><button class="btn btn-primary" onclick="changePassword()">🔑 Changer le mot de passe</button></div>
   </div>
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:0">🏷 Gestion des tags</div>
-      <button class="btn btn-primary btn-sm" onclick="openCreateTagModal()">➕ Nouveau tag</button>
-    </div>
-    <div id="tags-list"><div class="empty-state" style="padding:20px">Aucun tag créé</div></div>
-  </div>
+  <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><div class="card-title" style="margin-bottom:0">🏷 Gestion des tags</div><button class="btn btn-primary btn-sm" onclick="openCreateTagModal()">➕ Nouveau tag</button></div><div id="tags-list"><div class="empty-state" style="padding:20px">Aucun tag créé</div></div></div>
 </div>
 
 </main>
 </div>
 
-<!-- ===== MODALS ===== -->
-
-<!-- ADD ACCOUNT -->
+<!-- MODALS -->
 <div class="modal-overlay" id="modal-add">
   <div class="modal">
     <div class="modal-title">Ajouter un compte<button class="modal-close" onclick="closeModal('modal-add')">✕</button></div>
-    <div class="tabs">
-      <div class="tab" onclick="setAddTab('manual')">Manuel</div>
-      <div class="tab active" onclick="setAddTab('paste')">Coller JSON</div>
-    </div>
+    <div class="tabs"><div class="tab" onclick="setAddTab('manual')">Manuel</div><div class="tab active" onclick="setAddTab('paste')">Coller JSON</div></div>
     <div id="add-tab-manual" style="display:none">
       <div class="form-group"><label>Auth Token</label><input type="text" id="add-token" placeholder="ex: b3c..."></div>
       <div class="form-group"><label>Persistent Device ID</label><input type="text" id="add-pdid" placeholder="ex: A1B2C3D4..."></div>
       <div class="form-group"><label>Device ID (UUID)</label><input type="text" id="add-did" placeholder="ex: A1B2C3D4-..."></div>
-      <div class="grid-2">
-        <div class="form-group"><label>Latitude</label><input type="number" id="add-lat" value="48.8566" step="0.0001"></div>
-        <div class="form-group"><label>Longitude</label><input type="number" id="add-lon" value="2.3522" step="0.0001"></div>
-      </div>
+      <div class="grid-2"><div class="form-group"><label>Latitude</label><input type="number" id="add-lat" value="48.8566" step="0.0001"></div><div class="form-group"><label>Longitude</label><input type="number" id="add-lon" value="2.3522" step="0.0001"></div></div>
       <div class="form-group"><label>Refresh Token (optionnel)</label><input type="text" id="add-refresh" placeholder="optionnel"></div>
     </div>
-    <div id="add-tab-paste">
-      <div class="form-group">
-        <label>Colle tes données</label>
-        <textarea id="add-paste" rows="8" placeholder="Auth Token: xxx&#10;Refresh Token: xxx&#10;Device Persistent ID: xxx&#10;Device ID: xxx&#10;Latitude: 48.8566&#10;Longitude: 2.3522"></textarea>
-      </div>
-    </div>
-
-    <!-- PROXY PAR COMPTE -->
+    <div id="add-tab-paste"><div class="form-group"><label>Colle tes données</label><textarea id="add-paste" rows="8" placeholder="Auth Token: xxx&#10;Refresh Token: xxx&#10;Device Persistent ID: xxx&#10;Device ID: xxx&#10;Latitude: 48.8566&#10;Longitude: 2.3522"></textarea></div></div>
     <div style="border:1px solid rgba(68,138,255,0.25);border-radius:12px;padding:14px;margin-bottom:14px;background:rgba(68,138,255,0.03);">
       <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">🌐 Proxy dédié</div>
-      <div class="proxy-mode-toggle">
-        <button class="proxy-mode-btn active" id="proxy-add-mode-manual" onclick="setAddProxyMode('manual')">✍️ Manuel</button>
-        <button class="proxy-mode-btn" id="proxy-add-mode-pool" onclick="setAddProxyMode('pool')">🎱 Pool</button>
-        <button class="proxy-mode-btn" id="proxy-add-mode-none" onclick="setAddProxyMode('none')">🚫 Aucun</button>
-      </div>
-      <div id="add-proxy-manual-section">
-        <input type="text" id="add-proxy-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port" style="font-size:12px;">
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Le format sera automatiquement converti en socks5://</div>
-      </div>
-      <div id="add-proxy-pool-section" style="display:none">
-        <div style="padding:12px;background:rgba(68,138,255,0.08);border:1px solid rgba(68,138,255,0.25);border-radius:8px;display:flex;align-items:center;gap:12px">
-          <div style="font-size:24px">🎱</div>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--blue)" id="pool-available-count">Chargement...</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:3px">Un proxy sera automatiquement assigné et retiré du pool</div>
-          </div>
-        </div>
-      </div>
-      <div id="add-proxy-none-section" style="display:none">
-        <div style="font-size:12px;color:var(--muted);padding:8px 4px;">Ce compte utilisera le proxy global en fallback</div>
-      </div>
+      <div class="proxy-mode-toggle"><button class="proxy-mode-btn active" id="proxy-add-mode-manual" onclick="setAddProxyMode('manual')">✍️ Manuel</button><button class="proxy-mode-btn" id="proxy-add-mode-pool" onclick="setAddProxyMode('pool')">🎱 Pool</button><button class="proxy-mode-btn" id="proxy-add-mode-none" onclick="setAddProxyMode('none')">🚫 Aucun</button></div>
+      <div id="add-proxy-manual-section"><input type="text" id="add-proxy-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port" style="font-size:12px;"><div style="font-size:11px;color:var(--muted);margin-top:6px;">Le format sera automatiquement converti en socks5://</div></div>
+      <div id="add-proxy-pool-section" style="display:none"><div style="padding:12px;background:rgba(68,138,255,0.08);border:1px solid rgba(68,138,255,0.25);border-radius:8px;display:flex;align-items:center;gap:12px"><div style="font-size:24px">🎱</div><div><div style="font-size:13px;font-weight:600;color:var(--blue)" id="pool-available-count">Chargement...</div><div style="font-size:11px;color:var(--muted);margin-top:3px">Un proxy sera automatiquement assigné et retiré du pool</div></div></div></div>
+      <div id="add-proxy-none-section" style="display:none"><div style="font-size:12px;color:var(--muted);padding:8px 4px;">Ce compte utilisera le proxy global en fallback</div></div>
     </div>
-
-    <div class="form-group">
-      <label>Tags (optionnel)</label>
-      <div class="tag-selector" id="add-tag-selector"><span style="font-size:11px;color:var(--muted);font-style:italic">Aucun tag disponible</span></div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-primary" onclick="addAccount()">➕ Ajouter</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-add')">Annuler</button>
-    </div>
+    <div class="form-group"><label>Tags (optionnel)</label><div class="tag-selector" id="add-tag-selector"><span style="font-size:11px;color:var(--muted);font-style:italic">Aucun tag disponible</span></div></div>
+    <div style="display:flex;gap:10px;margin-top:8px"><button class="btn btn-primary" onclick="addAccount()">➕ Ajouter</button><button class="btn btn-secondary" onclick="closeModal('modal-add')">Annuler</button></div>
   </div>
 </div>
 
-<!-- PROXY PAR COMPTE (modal édition) -->
 <div class="modal-overlay" id="modal-account-proxy">
   <div class="modal" style="max-width:460px">
-    <div class="modal-title">
-      <span>🌐 Proxy — <span id="proxy-modal-account-name">Compte</span></span>
-      <button class="modal-close" onclick="closeModal('modal-account-proxy')">✕</button>
-    </div>
+    <div class="modal-title"><span>🌐 Proxy — <span id="proxy-modal-account-name">Compte</span></span><button class="modal-close" onclick="closeModal('modal-account-proxy')">✕</button></div>
     <input type="hidden" id="proxy-modal-account-id">
-    <div style="padding:12px 14px;background:rgba(68,138,255,0.06);border:1px solid rgba(68,138,255,0.2);border-radius:10px;margin-bottom:16px;font-size:12px;color:rgba(68,138,255,0.9);line-height:1.6;">
-      <strong>IP dédiée par compte.</strong> Toutes les requêtes de ce compte passeront par ce proxy.
-    </div>
+    <div style="padding:12px 14px;background:rgba(68,138,255,0.06);border:1px solid rgba(68,138,255,0.2);border-radius:10px;margin-bottom:16px;font-size:12px;color:rgba(68,138,255,0.9);line-height:1.6;"><strong>IP dédiée par compte.</strong> Toutes les requêtes de ce compte passeront par ce proxy.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--text)">Proxy dédié activé</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px" id="proxy-modal-status-label">Désactivé</div>
-      </div>
-      <label class="toggle-switch blue">
-        <input type="checkbox" id="proxy-modal-enabled" onchange="onProxyModalToggle()">
-        <span class="toggle-track"></span>
-        <span class="toggle-thumb"></span>
-      </label>
+      <div><div style="font-size:13px;font-weight:600;color:var(--text)">Proxy dédié activé</div><div style="font-size:11px;color:var(--muted);margin-top:3px" id="proxy-modal-status-label">Désactivé</div></div>
+      <label class="toggle-switch blue"><input type="checkbox" id="proxy-modal-enabled" onchange="onProxyModalToggle()"><span class="toggle-track"></span><span class="toggle-thumb"></span></label>
     </div>
     <div id="proxy-modal-fields">
-      <div class="form-group">
-        <label>URL du proxy</label>
-        <input type="text" id="proxy-modal-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port">
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn btn-secondary btn-sm" onclick="testAccountProxyFromModal()">🧪 Tester l'IP</button>
-      </div>
-      <div id="proxy-modal-ip-result" style="display:none" class="proxy-ip-display">
-        <div class="proxy-ip-dot" id="proxy-modal-ip-dot"></div>
-        <div>
-          <div class="proxy-ip-text" id="proxy-modal-ip-text">—</div>
-          <div class="proxy-ip-label" id="proxy-modal-ip-label"></div>
-        </div>
-      </div>
+      <div class="form-group"><label>URL du proxy</label><input type="text" id="proxy-modal-url" placeholder="user:pass@host:port ou socks5://user:pass@host:port"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn btn-secondary btn-sm" onclick="testAccountProxyFromModal()">🧪 Tester l'IP</button></div>
+      <div id="proxy-modal-ip-result" style="display:none" class="proxy-ip-display"><div class="proxy-ip-dot" id="proxy-modal-ip-dot"></div><div><div class="proxy-ip-text" id="proxy-modal-ip-text">—</div><div class="proxy-ip-label" id="proxy-modal-ip-label"></div></div></div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-primary" onclick="saveAccountProxy()">💾 Sauvegarder</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-account-proxy')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" onclick="saveAccountProxy()">💾 Sauvegarder</button><button class="btn btn-secondary" onclick="closeModal('modal-account-proxy')">Annuler</button></div>
   </div>
 </div>
 
-<!-- ACCOUNT SETTINGS -->
 <div class="modal-overlay" id="modal-account-settings">
   <div class="modal" style="max-width:380px">
     <div class="modal-title">⚙️ Paramètres comptes<button class="modal-close" onclick="closeModal('modal-account-settings')">✕</button></div>
     <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">🗑 Suppression automatique</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5">Supprimer automatiquement les comptes invalides lors de la vérification</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-auto-delete" onchange="saveAccountSettings()">
-          <span class="toggle-track"></span>
-          <span class="toggle-thumb"></span>
-        </label>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">🗑 Suppression automatique</div><div style="font-size:11px;color:var(--muted);line-height:1.5">Supprimer automatiquement les comptes invalides</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="toggle-auto-delete" onchange="saveAccountSettings()"><span class="toggle-track"></span><span class="toggle-thumb"></span></label>
       </div>
     </div>
     <div style="text-align:right"><button class="btn btn-secondary btn-sm" onclick="closeModal('modal-account-settings')">Fermer</button></div>
   </div>
 </div>
 
-<!-- BIO -->
 <div class="modal-overlay" id="modal-bio">
   <div class="modal">
     <div class="modal-title">Modifier la bio<button class="modal-close" onclick="closeModal('modal-bio')">✕</button></div>
     <input type="hidden" id="bio-account-id">
     <div class="form-group"><label>Nouvelle bio (max 500 chars)</label><textarea id="bio-text" rows="5" maxlength="500"></textarea></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" onclick="saveBio()">💾 Sauvegarder</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-bio')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="saveBio()">💾 Sauvegarder</button><button class="btn btn-secondary" onclick="closeModal('modal-bio')">Annuler</button></div>
   </div>
 </div>
 
-<!-- CREATE USER -->
 <div class="modal-overlay" id="modal-create-user">
   <div class="modal">
     <div class="modal-title">Créer un accès<button class="modal-close" onclick="closeModal('modal-create-user')">✕</button></div>
     <div class="form-group"><label>Username</label><input type="text" id="cu-username" placeholder="ex: client1"></div>
     <div class="form-group"><label>Mot de passe</label><input type="password" id="cu-password" placeholder="min 6 caractères"></div>
     <div class="form-group"><label>Rôle</label><select id="cu-role"><option value="user">Utilisateur</option><option value="admin">Admin</option></select></div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-primary" onclick="createUser()">➕ Créer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-create-user')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:8px"><button class="btn btn-primary" onclick="createUser()">➕ Créer</button><button class="btn btn-secondary" onclick="closeModal('modal-create-user')">Annuler</button></div>
   </div>
 </div>
 
-<!-- RESET PW -->
 <div class="modal-overlay" id="modal-reset-pw">
   <div class="modal">
     <div class="modal-title">Réinitialiser le mot de passe<button class="modal-close" onclick="closeModal('modal-reset-pw')">✕</button></div>
     <input type="hidden" id="rp-user-id">
     <div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="rp-password" placeholder="min 6 caractères"></div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-primary" onclick="resetPassword()">🔑 Réinitialiser</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-reset-pw')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:8px"><button class="btn btn-primary" onclick="resetPassword()">🔑 Réinitialiser</button><button class="btn btn-secondary" onclick="closeModal('modal-reset-pw')">Annuler</button></div>
   </div>
 </div>
 
-<!-- CREATE AUTOMATION -->
 <div class="modal-overlay" id="modal-create-auto">
   <div class="modal" style="max-width:520px">
     <div class="modal-title">🤖 Nouvelle tâche automatisée<button class="modal-close" onclick="closeModal('modal-create-auto')">✕</button></div>
@@ -823,31 +625,20 @@
       <div class="form-group"><label>Intervalle (minutes)</label><input type="number" id="auto-interval" value="30" min="5" max="1440"></div>
     </div>
     <div id="auto-dm-opts">
-      <div class="grid-2">
-        <div class="form-group"><label>Username</label><input type="text" id="auto-username" placeholder="ex: mon_insta"></div>
-        <div class="form-group"><label>Réseau social</label><input type="text" id="auto-social" value="Instagram"></div>
-      </div>
+      <div class="grid-2"><div class="form-group"><label>Username</label><input type="text" id="auto-username" placeholder="ex: mon_insta"></div><div class="form-group"><label>Réseau social</label><input type="text" id="auto-social" value="Instagram"></div></div>
+    </div>
+    <div id="auto-lang-section" style="display:none;margin-bottom:16px">
+      <label style="margin-bottom:8px">Langue des réponses IA</label>
+      <div class="lang-toggle"><button class="lang-btn active" id="auto-lang-fr" onclick="setAutoLanguage('fr')">🇫🇷 Français</button><button class="lang-btn" id="auto-lang-en" onclick="setAutoLanguage('en')">🇬🇧 English</button></div>
     </div>
     <div id="auto-swipe-opts" style="display:none">
-      <div class="grid-2">
-        <div class="form-group"><label>Swipes par cycle</label><input type="number" id="auto-swipe-count" value="50" min="5" max="300"></div>
-        <div class="form-group"><label>% de Likes</label><input type="number" id="auto-like-pct" value="80" min="0" max="100"></div>
-      </div>
+      <div class="grid-2"><div class="form-group"><label>Swipes par cycle</label><input type="number" id="auto-swipe-count" value="50" min="5" max="300"></div><div class="form-group"><label>% de Likes</label><input type="number" id="auto-like-pct" value="80" min="0" max="100"></div></div>
     </div>
-    <div style="margin-bottom:16px">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(255,58,94,0.06);border:1px solid rgba(255,58,94,0.2);border-radius:8px;">
-        <input type="checkbox" id="auto-parallel" style="width:auto;accent-color:var(--accent)">
-        <div><div style="font-size:11px;font-weight:600;color:var(--accent)">⚡ Mode simultané</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tous les comptes en même temps</div></div>
-      </label>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-primary" onclick="createAutomationTask()">➕ Créer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-create-auto')">Annuler</button>
-    </div>
+    <div style="margin-bottom:16px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(255,58,94,0.06);border:1px solid rgba(255,58,94,0.2);border-radius:8px;"><input type="checkbox" id="auto-parallel" style="width:auto;accent-color:var(--accent)"><div><div style="font-size:11px;font-weight:600;color:var(--accent)">⚡ Mode simultané</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tous les comptes en même temps</div></div></label></div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" onclick="createAutomationTask()">➕ Créer</button><button class="btn btn-secondary" onclick="closeModal('modal-create-auto')">Annuler</button></div>
   </div>
 </div>
 
-<!-- AUTOMATION LOG -->
 <div class="modal-overlay" id="modal-auto-log">
   <div class="modal" style="max-width:600px">
     <div class="modal-title">📋 Logs — <span id="auto-log-title">Tâche</span><button class="modal-close" onclick="closeModal('modal-auto-log')">✕</button></div>
@@ -856,21 +647,16 @@
   </div>
 </div>
 
-<!-- CREATE TAG -->
 <div class="modal-overlay" id="modal-create-tag">
   <div class="modal" style="max-width:380px">
     <div class="modal-title">Créer un tag<button class="modal-close" onclick="closeModal('modal-create-tag')">✕</button></div>
     <div class="form-group"><label>Nom du tag</label><input type="text" id="ct-name" placeholder="ex: Premium, Paris..."></div>
     <div class="form-group"><label>Couleur</label><div class="color-picker-row" id="ct-color-picker"></div></div>
     <div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;text-align:center"><span id="ct-preview" class="tag-pill">Aperçu</span></div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-primary" onclick="createTag()">➕ Créer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-create-tag')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" onclick="createTag()">➕ Créer</button><button class="btn btn-secondary" onclick="closeModal('modal-create-tag')">Annuler</button></div>
   </div>
 </div>
 
-<!-- EDIT TAG -->
 <div class="modal-overlay" id="modal-edit-tag">
   <div class="modal" style="max-width:380px">
     <div class="modal-title">Modifier le tag<button class="modal-close" onclick="closeModal('modal-edit-tag')">✕</button></div>
@@ -878,23 +664,16 @@
     <div class="form-group"><label>Nom du tag</label><input type="text" id="et-name"></div>
     <div class="form-group"><label>Couleur</label><div class="color-picker-row" id="et-color-picker"></div></div>
     <div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;text-align:center"><span id="et-preview" class="tag-pill">Aperçu</span></div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-primary" onclick="saveEditTag()">💾 Sauvegarder</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-edit-tag')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" onclick="saveEditTag()">💾 Sauvegarder</button><button class="btn btn-secondary" onclick="closeModal('modal-edit-tag')">Annuler</button></div>
   </div>
 </div>
 
-<!-- EDIT ACCOUNT TAGS -->
 <div class="modal-overlay" id="modal-account-tags">
   <div class="modal" style="max-width:380px">
     <div class="modal-title">Tags du compte<button class="modal-close" onclick="closeModal('modal-account-tags')">✕</button></div>
     <input type="hidden" id="at-account-id">
     <div class="form-group"><label>Sélectionne les tags</label><div class="tag-selector" id="account-tag-selector" style="min-height:60px"></div></div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-primary" onclick="saveAccountTags()">💾 Sauvegarder</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-account-tags')">Annuler</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" onclick="saveAccountTags()">💾 Sauvegarder</button><button class="btn btn-secondary" onclick="closeModal('modal-account-tags')">Annuler</button></div>
   </div>
 </div>
 
@@ -904,6 +683,7 @@
 const API = '/api';
 let authToken = sessionStorage.getItem('auth_token') || null;
 let accounts = [], allTags = [], swipeMode = 'basic', dmMode = 'massdm';
+let dmLanguage = 'fr', autoLanguage = 'fr', globalLanguage = 'fr';
 let swipeJobId = null, dmJobId = null, swipeInterval = null, dmInterval = null;
 let stats = {}, addTabMode = 'paste', currentUser = null;
 let accountSettings = { auto_delete_dead: false };
@@ -918,7 +698,6 @@ async function apiFetch(url, options={}) {
   return fetch(url, {...options, headers:h});
 }
 
-// ── AUTH ──
 document.addEventListener('DOMContentLoaded', async () => {
   const auth = await checkAuth();
   if(!auth){ showLoginScreen(); return; }
@@ -927,32 +706,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAuth() {
   if(!authToken) return false;
-  try {
-    const r = await apiFetch(`${API}/auth/me`);
-    const d = await r.json();
-    if(d.authenticated){ currentUser=d; return true; }
-  } catch{}
-  authToken=null; sessionStorage.removeItem('auth_token');
-  return false;
+  try { const r=await apiFetch(`${API}/auth/me`); const d=await r.json(); if(d.authenticated){ currentUser=d; return true; } } catch{}
+  authToken=null; sessionStorage.removeItem('auth_token'); return false;
 }
-
-function showLoginScreen() {
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('app-shell').style.display='none';
-}
-
-function showAppShell() {
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app-shell').style.display='flex';
-}
+function showLoginScreen(){ document.getElementById('login-screen').style.display='flex'; document.getElementById('app-shell').style.display='none'; }
+function showAppShell(){ document.getElementById('login-screen').style.display='none'; document.getElementById('app-shell').style.display='flex'; }
 
 async function login() {
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
+  const username=document.getElementById('login-username').value.trim();
+  const password=document.getElementById('login-password').value;
   if(!username||!password){ loginError('Remplis les deux champs'); return; }
   try {
-    const r = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
-    const d = await r.json();
+    const r=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const d=await r.json();
     if(d.success){ authToken=d.token; sessionStorage.setItem('auth_token',authToken); currentUser={username:d.username,role:d.role}; initApp(); }
     else loginError(d.error||'Identifiants incorrects');
   } catch{ loginError('Impossible de joindre le backend'); }
@@ -975,40 +741,122 @@ function initApp() {
   if(avaEl) avaEl.textContent=uname.charAt(0).toUpperCase()||'?';
   checkServer();
   loadTags().then(()=>renderAddTagSelector());
-  loadAccountsData();
-  loadProxyData();
-  loadStats();
-  loadAccountSettings();
+  loadAccountsData(); loadProxyData(); loadStats(); loadAccountSettings(); loadIASettings();
   setInterval(checkServer, 15000);
 }
 
 async function checkServer() {
   try {
-    const r = await apiFetch(`${API}/auth/me`,{signal:AbortSignal.timeout(3000)});
-    const d = await r.json();
+    const r=await apiFetch(`${API}/auth/me`,{signal:AbortSignal.timeout(3000)});
+    const d=await r.json();
     if(d.authenticated){ document.getElementById('server-dot').className='status-dot online'; document.getElementById('server-label').textContent='Backend connecté'; }
     else throw new Error();
-  } catch {
-    document.getElementById('server-dot').className='status-dot';
-    document.getElementById('server-label').textContent='Hors ligne';
-  }
+  } catch{ document.getElementById('server-dot').className='status-dot'; document.getElementById('server-label').textContent='Hors ligne'; }
 }
 
 async function loadAccountSettings() {
-  try {
-    const r = await apiFetch(`${API}/settings`);
-    const d = await r.json();
-    if(d.success){ accountSettings=d.settings; const cb=document.getElementById('toggle-auto-delete'); if(cb) cb.checked=!!d.settings.auto_delete_dead; }
-  } catch{}
+  try { const r=await apiFetch(`${API}/settings`); const d=await r.json(); if(d.success){ accountSettings=d.settings; const cb=document.getElementById('toggle-auto-delete'); if(cb) cb.checked=!!d.settings.auto_delete_dead; } } catch{}
 }
-
 async function saveAccountSettings() {
   const checked=document.getElementById('toggle-auto-delete').checked;
+  try { await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({auto_delete_dead:checked})}); toast(checked?'🗑 Suppression auto activée':'✅ Suppression auto désactivée',checked?'error':'success'); accountSettings.auto_delete_dead=checked; } catch{ toast('Erreur sauvegarde','error'); }
+}
+
+// ── IA SETTINGS ──
+async function loadIASettings() {
   try {
-    await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({auto_delete_dead:checked})});
-    toast(checked?'🗑 Suppression auto activée':'✅ Suppression auto désactivée', checked?'error':'success');
-    accountSettings.auto_delete_dead=checked;
-  } catch{ toast('Erreur sauvegarde','error'); }
+    const r=await apiFetch(`${API}/settings`); const d=await r.json(); if(!d.success) return;
+    const s=d.settings;
+    globalLanguage=s.chatting_language||'fr'; dmLanguage=globalLanguage; autoLanguage=globalLanguage;
+    updateLangUI('global',globalLanguage); updateLangUI('dm',dmLanguage); updateLangUI('auto',autoLanguage);
+    renderIAKeyStatus(s);
+  } catch{}
+}
+function renderIAKeyStatus(settings) {
+  const el=document.getElementById('ia-key-status-display'); if(!el) return;
+  if(settings.has_openai_key){
+    el.innerHTML=`<div class="ia-key-status ok"><span>✅</span><div><div style="font-weight:600">Clé configurée</div><div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--font-mono)">${settings.openai_api_key_preview||'••••••••••••'}</div></div></div>`;
+  } else {
+    el.innerHTML=`<div class="ia-key-status missing"><span>⚠️</span><div><div style="font-weight:600">Aucune clé configurée</div><div style="font-size:11px;margin-top:2px">Le Chatting IA ne fonctionnera pas sans clé OpenAI</div></div></div>`;
+  }
+}
+async function saveOpenAIKey() {
+  const key=document.getElementById('ia-openai-key').value.trim();
+  if(!key){ toast('Entre une clé OpenAI','error'); return; }
+  if(!key.startsWith('sk-')){ toast('⚠️ La clé doit commencer par "sk-"','error'); return; }
+  try {
+    const r=await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({openai_api_key:key})});
+    const d=await r.json();
+    if(d.success){ toast('✅ Clé OpenAI sauvegardée','success'); document.getElementById('ia-openai-key').value=''; loadIASettings(); }
+    else toast(`❌ ${d.error}`,'error');
+  } catch{ toast('Erreur réseau','error'); }
+}
+async function clearOpenAIKey() {
+  if(!confirm('Supprimer la clé OpenAI ? Le Chatting IA ne fonctionnera plus.')) return;
+  try { await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({openai_api_key:'',clear_openai_key:true})}); toast('Clé supprimée','success'); loadIASettings(); } catch{ toast('Erreur réseau','error'); }
+}
+async function testOpenAIKey() {
+  const resultEl=document.getElementById('ia-test-result');
+  resultEl.style.display='';
+  resultEl.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">🔄 Test en cours...</div>';
+  try {
+    const r=await apiFetch(`${API}/settings/test-openai`,{method:'POST'});
+    const d=await r.json();
+    resultEl.innerHTML=`<div class="ia-key-status ${d.success?'ok':'error'}" style="margin-top:0">${d.success?'✅':'❌'} ${d.message||d.error}</div>`;
+  } catch{ resultEl.innerHTML=`<div class="ia-key-status error" style="margin-top:0">❌ Erreur réseau</div>`; }
+}
+function updateLangUI(scope, lang) {
+  const frId=scope==='dm'?'dm-lang-fr':scope==='auto'?'auto-lang-fr':'global-lang-fr';
+  const enId=scope==='dm'?'dm-lang-en':scope==='auto'?'auto-lang-en':'global-lang-en';
+  const frEl=document.getElementById(frId); const enEl=document.getElementById(enId);
+  if(frEl) frEl.classList.toggle('active',lang==='fr');
+  if(enEl) enEl.classList.toggle('active',lang==='en');
+}
+function setDmLanguage(lang){ dmLanguage=lang; updateLangUI('dm',lang); }
+function setAutoLanguage(lang){ autoLanguage=lang; updateLangUI('auto',lang); }
+function setGlobalLanguage(lang){ globalLanguage=lang; updateLangUI('global',lang); dmLanguage=lang; autoLanguage=lang; updateLangUI('dm',lang); updateLangUI('auto',lang); }
+async function saveGlobalLanguage() {
+  try {
+    const r=await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({chatting_language:globalLanguage})});
+    const d=await r.json();
+    if(d.success) toast(`✅ Langue par défaut : ${globalLanguage==='fr'?'🇫🇷 Français':'🇬🇧 English'}`,'success');
+    else toast(`❌ ${d.error}`,'error');
+  } catch{ toast('Erreur réseau','error'); }
+ 'auto' ? 'auto-lang-fr' : 'global-lang-fr';
+  const enId = scope === 'dm' ? 'dm-lang-en' : scope === 'auto' ? 'auto-lang-en' : 'global-lang-en';
+  const frEl = document.getElementById(frId);
+  const enEl = document.getElementById(enId);
+  if(frEl) frEl.classList.toggle('active', lang==='fr');
+  if(enEl) enEl.classList.toggle('active', lang==='en');
+}
+
+function setDmLanguage(lang) {
+  dmLanguage = lang;
+  updateLangUI('dm', lang);
+}
+
+function setAutoLanguage(lang) {
+  autoLanguage = lang;
+  updateLangUI('auto', lang);
+}
+
+function setGlobalLanguage(lang) {
+  globalLanguage = lang;
+  updateLangUI('global', lang);
+  // Sync aussi les autres sélecteurs
+  dmLanguage = lang;
+  autoLanguage = lang;
+  updateLangUI('dm', lang);
+  updateLangUI('auto', lang);
+}
+
+async function saveGlobalLanguage() {
+  try {
+    const r = await apiFetch(`${API}/settings`,{method:'POST',body:JSON.stringify({chatting_language:globalLanguage})});
+    const d = await r.json();
+    if(d.success) toast(`✅ Langue par défaut : ${globalLanguage==='fr'?'🇫🇷 Français':'🇬🇧 English'}`,'success');
+    else toast(`❌ ${d.error}`,'error');
+  } catch{ toast('Erreur réseau','error'); }
 }
 
 // ── PROXY HELPERS ──
@@ -1016,9 +864,7 @@ function parseProxyUrl(raw) {
   raw = raw.trim();
   if (!raw) return '';
   if (raw.startsWith('http') || raw.startsWith('socks')) return raw;
-  // Format user:pass@host:port → socks5://user:pass@host:port
   if (raw.includes('@')) return `socks5://${raw}`;
-  // Format host:port:user:pass
   const firstColon = raw.indexOf(':');
   if (firstColon === -1) return raw;
   const host = raw.substring(0, firstColon);
@@ -1316,13 +1162,14 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick')?.includes(id)) n.classList.add('active'); });
+  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick')?.includes(`'${id}'`)) n.classList.add('active'); });
   if(id==='dashboard') refreshDashboard();
   if(id==='swipe'||id==='massdm') renderAccountCheckboxes(id==='swipe'?'swipe':'dm');
   if(id==='admin'){ loadAdminUsers(); renderTagsList(); }
   if(id==='automation') loadAutomationPage();
   if(id==='stats') loadStatsPage();
   if(id==='proxy'){ loadProxyData(); loadPoolCount(); }
+  if(id==='ia-settings') loadIASettings();
 }
 
 // ── ACCOUNTS ──
@@ -1414,54 +1261,129 @@ function setAddTab(mode) {
 
 async function addAccount() {
   let payload;
-  if(addTabMode==='paste'){
-    const text=document.getElementById('add-paste').value.trim();
-    payload=parsePasteFormat(text);
-    if(!payload){ toast('Format non reconnu','error'); return; }
-  } else {
-    payload={token:document.getElementById('add-token').value.trim(),persistent_device_id:document.getElementById('add-pdid').value.trim(),device_id:document.getElementById('add-did').value.trim(),latitude:parseFloat(document.getElementById('add-lat').value)||48.8566,longitude:parseFloat(document.getElementById('add-lon').value)||2.3522,refresh_token:document.getElementById('add-refresh').value.trim()||undefined};
-    if(!payload.token||!payload.persistent_device_id||!payload.device_id){ toast('Remplis les champs obligatoires','error'); return; }
-  }
-
-  // Gestion proxy
   let proxyUrl = '', proxyEnabled = false;
-  if(addProxyMode === 'manual') {
+  if (addProxyMode === 'manual') {
     const rawUrl = document.getElementById('add-proxy-url')?.value.trim() || '';
     proxyUrl = parseProxyUrl(rawUrl);
     proxyEnabled = !!proxyUrl;
-  } else if(addProxyMode === 'pool') {
+  } else if (addProxyMode === 'pool') {
     try {
       const pr = await apiFetch(`${API}/proxy-pool/pop`, { method: 'POST' });
       const pd = await pr.json();
-      if(pd.success){ proxyUrl = pd.proxy; proxyEnabled = true; toast('🎱 Proxy assigné depuis le pool','info'); }
-      else toast('⚠️ Pool vide — compte ajouté sans proxy','info');
+      if (pd.success) { proxyUrl = pd.proxy; proxyEnabled = true; toast('🎱 Proxy assigné depuis le pool', 'info'); }
+      else toast('⚠️ Pool vide — compte ajouté sans proxy', 'info');
     } catch {}
   }
+
+  if (addTabMode === 'paste') {
+    const text = document.getElementById('add-paste').value.trim();
+    const parsed = parsePasteFormat(text);
+    if (!parsed) { toast('Format non reconnu', 'error'); return; }
+
+    if (parsed._bulk) {
+      let ok = 0, fail = 0, skip = 0;
+      toast(`⏳ Import de ${parsed._bulk.length} comptes en cours...`, 'info');
+      for (const item of parsed._bulk) {
+        if (addProxyMode === 'pool') {
+          try {
+            const pr = await apiFetch(`${API}/proxy-pool/pop`, { method: 'POST' });
+            const pd = await pr.json();
+            if (pd.success) { item.proxy_url = pd.proxy; item.proxy_enabled = true; }
+            else { item.proxy_url = ''; item.proxy_enabled = false; }
+          } catch { item.proxy_url = ''; item.proxy_enabled = false; }
+        } else {
+          item.proxy_url = proxyUrl;
+          item.proxy_enabled = proxyEnabled;
+        }
+        item.tags = getSelectedTagIds('add-tag-selector');
+        try {
+          const r = await apiFetch(`${API}/accounts`, { method: 'POST', body: JSON.stringify(item) });
+          const d = await r.json();
+          if (d.success) ok++;
+          else if (d.error?.includes('déjà existant')) skip++;
+          else { fail++; console.warn('Échec ajout:', d.error); }
+        } catch { fail++; }
+      }
+      toast(`✅ ${ok} importé(s)${skip ? ` · ${skip} déjà présent(s)` : ''}${fail ? ` · ${fail} échec(s)` : ''}`, ok > 0 ? 'success' : 'error');
+      closeModal('modal-add');
+      document.getElementById('add-paste').value = '';
+      document.querySelectorAll('#add-tag-selector .tag-selector-item').forEach(el => el.classList.remove('selected'));
+      loadAccountsData(); loadPoolCount();
+      return;
+    }
+    payload = parsed;
+  } else {
+    payload = {
+      token: document.getElementById('add-token').value.trim(),
+      persistent_device_id: document.getElementById('add-pdid').value.trim(),
+      device_id: document.getElementById('add-did').value.trim(),
+      latitude: parseFloat(document.getElementById('add-lat').value) || 48.8566,
+      longitude: parseFloat(document.getElementById('add-lon').value) || 2.3522,
+      refresh_token: document.getElementById('add-refresh').value.trim() || undefined,
+    };
+    if (!payload.token) { toast('Token requis', 'error'); return; }
+    if (!payload.persistent_device_id) payload.persistent_device_id = '';
+    if (!payload.device_id) payload.device_id = '';
+  }
+
   payload.proxy_enabled = proxyEnabled;
   payload.proxy_url = proxyUrl;
   payload.tags = getSelectedTagIds('add-tag-selector');
 
-  toast('Vérification du token...','info');
+  toast('Vérification du token...', 'info');
   try {
-    const r=await apiFetch(`${API}/accounts`,{method:'POST',body:JSON.stringify(payload)});
-    const d=await r.json();
-    if(d.success){ toast(`✅ ${d.name} ajouté !`,'success'); closeModal('modal-add'); document.querySelectorAll('#add-tag-selector .tag-selector-item').forEach(el=>el.classList.remove('selected')); loadAccountsData(); loadPoolCount(); }
-    else toast(`❌ ${d.error}`,'error');
-  } catch{ toast('Erreur réseau — backend connecté ?','error'); }
+    const r = await apiFetch(`${API}/accounts`, { method: 'POST', body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (d.success) {
+      toast(`✅ ${d.name} ajouté !`, 'success');
+      closeModal('modal-add');
+      document.getElementById('add-paste').value = '';
+      document.querySelectorAll('#add-tag-selector .tag-selector-item').forEach(el => el.classList.remove('selected'));
+      loadAccountsData(); loadPoolCount();
+    } else toast(`❌ ${d.error}`, 'error');
+  } catch { toast('Erreur réseau — backend connecté ?', 'error'); }
 }
 
 function parsePasteFormat(text) {
-  const lines=text.split('\n'), data={};
-  for(const line of lines){
-    const l=line.trim().toLowerCase();
-    if(l.startsWith('auth token:')) data.token=line.split(':').slice(1).join(':').trim();
-    else if(l.startsWith('refresh token:')) data.refresh_token=line.split(':').slice(1).join(':').trim();
-    else if(l.startsWith('device persistent id:')) data.persistent_device_id=line.split(':').slice(1).join(':').trim();
-    else if(l.startsWith('device id:')) data.device_id=line.split(':').slice(1).join(':').trim();
-    else if(l.startsWith('latitude:')) data.latitude=parseFloat(line.split(':')[1]);
-    else if(l.startsWith('longitude:')) data.longitude=parseFloat(line.split(':')[1]);
+  const results = [];
+  const pipeLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of pipeLines) {
+    if (line.includes('token=') && line.includes('|')) {
+      const parts = {};
+      line.split('|').forEach(seg => {
+        const [k, ...v] = seg.trim().split('=');
+        if (k && v.length) parts[k.trim().toLowerCase()] = v.join('=').trim();
+      });
+      if (parts.token) {
+        results.push({
+          token: parts.token,
+          persistent_device_id: parts.persistent_device_id || '',
+          device_id: parts.device_id || '',
+          latitude: parseFloat(parts.lat) || 48.8566,
+          longitude: parseFloat(parts.lon) || 2.3522,
+          refresh_token: parts.refresh_token || undefined,
+        });
+      }
+      continue;
+    }
   }
-  return (data.token&&data.persistent_device_id&&data.device_id)?data:null;
+  if (results.length === 1) return results[0];
+  if (results.length > 1) return { _bulk: results };
+
+  const lines = text.split('\n');
+  const data = {};
+  for (const line of lines) {
+    const l = line.trim().toLowerCase();
+    if (l.startsWith('auth token:')) data.token = line.split(':').slice(1).join(':').trim();
+    else if (l.startsWith('refresh token:')) data.refresh_token = line.split(':').slice(1).join(':').trim();
+    else if (l.startsWith('device persistent id:')) data.persistent_device_id = line.split(':').slice(1).join(':').trim();
+    else if (l.startsWith('device id:')) data.device_id = line.split(':').slice(1).join(':').trim();
+    else if (l.startsWith('latitude:')) data.latitude = parseFloat(line.split(':')[1]);
+    else if (l.startsWith('longitude:')) data.longitude = parseFloat(line.split(':')[1]);
+  }
+  if (!data.persistent_device_id) data.persistent_device_id = '';
+  if (!data.device_id) data.device_id = '';
+  return (data.token) ? data : null;
 }
 
 // ── BIO ──
@@ -1636,6 +1558,8 @@ function setDmMode(mode) {
   document.getElementById('dm-mode-massdm').classList.toggle('active',mode==='massdm');
   document.getElementById('dm-mode-chatting').classList.toggle('active',mode==='chatting');
   document.getElementById('dm-chatting-info').style.display=mode==='chatting'?'':'none';
+  // Affiche le sélecteur de langue seulement en mode chatting
+  document.getElementById('dm-lang-section').style.display=mode==='chatting'?'':'none';
 }
 
 async function startDm() {
@@ -1643,7 +1567,13 @@ async function startDm() {
   if(!selectedIds.length){ toast('Sélectionne au moins un compte','error'); return; }
   const username=document.getElementById('dm-username').value.trim();
   if(!username){ toast('Username requis','error'); return; }
-  const payload={account_ids:selectedIds,username,social_network:document.getElementById('dm-social').value.trim()||'Instagram',mode:dmMode};
+  const payload={
+    account_ids:selectedIds,
+    username,
+    social_network:document.getElementById('dm-social').value.trim()||'Instagram',
+    mode:dmMode,
+    language:dmLanguage
+  };
   try {
     const r=await apiFetch(`${API}/dm/start`,{method:'POST',body:JSON.stringify(payload)});
     const d=await r.json();
@@ -1701,6 +1631,8 @@ function onAutoTypeChange() {
   const type=document.getElementById('auto-type').value;
   document.getElementById('auto-dm-opts').style.display=['massdm','chatting'].includes(type)?'':'none';
   document.getElementById('auto-swipe-opts').style.display=['swipe','forcematch'].includes(type)?'':'none';
+  // Affiche sélecteur langue seulement pour chatting
+  document.getElementById('auto-lang-section').style.display=type==='chatting'?'':'none';
 }
 
 async function loadAutomationPage() {
@@ -1718,18 +1650,28 @@ async function loadAutomationPage() {
 function renderAutomationTasks(tasks) {
   const el=document.getElementById('automation-tasks-list');
   if(!tasks.length){ el.innerHTML='<div class="empty-state"><div class="icon">🤖</div>Aucune tâche configurée</div>'; return; }
-  el.innerHTML=tasks.map(t=>`<div class="auto-task-card ${t.status==='running'?'running':''}" id="task-${t.id}">
-    <div class="task-header"><div><div class="task-name">${t.name}</div></div><span class="task-type-badge">${t.type}</span></div>
-    <div class="task-meta">🔁 Toutes les ${t.interval_minutes} min${t.username?` · @${t.username}`:''} ${t.status==='running'?`<span style="color:var(--green);font-weight:600;margin-left:8px">● EN COURS</span>`:''}
-    ${t.next_run_str&&t.next_run_str!=='—'?`<br><span style="color:var(--muted);font-size:11px">Prochain cycle: ${t.next_run_str}</span>`:''}</div>
-    <div class="task-actions">
-      ${t.status==='running'
-        ?`<button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="stopAutomation('${t.id}')">⏹ Stop</button>`
-        :`<button class="btn btn-success" style="padding:6px 12px;font-size:12px" onclick="startAutomation('${t.id}')">▶ Start</button>`}
-      <button class="btn btn-secondary btn-sm" onclick="openAutoLog('${t.id}','${t.name}')">📋 Logs</button>
-      <button class="btn btn-danger" onclick="deleteAutomation('${t.id}')">🗑</button>
-    </div>
-  </div>`).join('');
+  el.innerHTML=tasks.map(t=>{
+    const langBadge = ['chatting','massdm'].includes(t.type) && t.language
+      ? `<span class="task-lang-badge">${t.language==='en'?'🇬🇧 EN':'🇫🇷 FR'}</span>`
+      : '';
+    return `<div class="auto-task-card ${t.status==='running'?'running':''}" id="task-${t.id}">
+      <div class="task-header">
+        <div><div class="task-name">${t.name}</div></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="task-type-badge">${t.type}</span>${langBadge}
+        </div>
+      </div>
+      <div class="task-meta">🔁 Toutes les ${t.interval_minutes} min${t.username?` · @${t.username}`:''} ${t.status==='running'?`<span style="color:var(--green);font-weight:600;margin-left:8px">● EN COURS</span>`:''}
+      ${t.next_run_str&&t.next_run_str!=='—'?`<br><span style="color:var(--muted);font-size:11px">Prochain cycle: ${t.next_run_str}</span>`:''}</div>
+      <div class="task-actions">
+        ${t.status==='running'
+          ?`<button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="stopAutomation('${t.id}')">⏹ Stop</button>`
+          :`<button class="btn btn-success" style="padding:6px 12px;font-size:12px" onclick="startAutomation('${t.id}')">▶ Start</button>`}
+        <button class="btn btn-secondary btn-sm" onclick="openAutoLog('${t.id}','${t.name}')">📋 Logs</button>
+        <button class="btn btn-danger" onclick="deleteAutomation('${t.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderDashboardAutomation(tasks) {
@@ -1738,7 +1680,7 @@ function renderDashboardAutomation(tasks) {
   const typeEmojis={'swipe':'🔄','forcematch':'💎','massdm':'💬','chatting':'🤖'};
   el.innerHTML=tasks.map(t=>`<div class="dash-auto-row ${t.status==='running'?'running':''}">
     <div class="dash-auto-icon">${typeEmojis[t.type]||'⚡'}</div>
-    <div class="dash-auto-info"><div class="dash-auto-name">${t.name}</div><div class="dash-auto-meta"><span class="dash-auto-status-dot ${t.status==='running'?'running':''}"></span>${t.status==='running'?'En cours':'Arrêté'} · ${t.interval_minutes}min</div></div>
+    <div class="dash-auto-info"><div class="dash-auto-name">${t.name}</div><div class="dash-auto-meta"><span class="dash-auto-status-dot ${t.status==='running'?'running':''}"></span>${t.status==='running'?'En cours':'Arrêté'} · ${t.interval_minutes}min${t.language&&['chatting','massdm'].includes(t.type)?' · '+(t.language==='en'?'🇬🇧':'🇫🇷'):''}</div></div>
     <div>${t.status==='running'
       ?`<button class="dash-auto-btn stop" onclick="stopAutomation('${t.id}')">⏹</button>`
       :`<button class="dash-auto-btn start" onclick="startAutomation('${t.id}')">▶</button>`}</div>
@@ -1749,7 +1691,16 @@ async function createAutomationTask() {
   const name=document.getElementById('auto-name').value.trim();
   const type=document.getElementById('auto-type').value;
   if(!name){ toast('Nom requis','error'); return; }
-  const payload={name,type,interval_minutes:parseInt(document.getElementById('auto-interval').value)||30,username:document.getElementById('auto-username')?.value.trim()||'',social_network:document.getElementById('auto-social')?.value.trim()||'Instagram',swipe_count:parseInt(document.getElementById('auto-swipe-count')?.value)||50,like_pct:parseInt(document.getElementById('auto-like-pct')?.value)||80,parallel:document.getElementById('auto-parallel')?.checked||false};
+  const payload={
+    name, type,
+    interval_minutes:parseInt(document.getElementById('auto-interval').value)||30,
+    username:document.getElementById('auto-username')?.value.trim()||'',
+    social_network:document.getElementById('auto-social')?.value.trim()||'Instagram',
+    swipe_count:parseInt(document.getElementById('auto-swipe-count')?.value)||50,
+    like_pct:parseInt(document.getElementById('auto-like-pct')?.value)||80,
+    parallel:document.getElementById('auto-parallel')?.checked||false,
+    language: type==='chatting' ? autoLanguage : globalLanguage,
+  };
   try {
     const r=await apiFetch(`${API}/automation`,{method:'POST',body:JSON.stringify(payload)});
     const d=await r.json();
@@ -1929,6 +1880,11 @@ function openModal(id) {
     setAddTab('paste');
     setAddProxyMode('manual');
     loadPoolCount();
+  }
+  if(id === 'modal-create-auto') {
+    // Sync la langue auto avec la langue globale
+    updateLangUI('auto', autoLanguage);
+    onAutoTypeChange();
   }
 }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
