@@ -1,6 +1,7 @@
 """
 Backend Flask - API REST pour le panel web Tinder Bot
 Proxy par compte : chaque compte peut avoir son propre proxy
+Clé OpenAI configurable depuis le panel + langue chatting IA
 """
 
 from flask import Flask, request, jsonify, session
@@ -40,22 +41,6 @@ CORS(app, supports_credentials=True, origins=['*'])
 
 import threading as _threading
 _tokens_lock = _threading.Lock()
-TOKENS_FILE = "active_tokens.json"
-
-def _load_tokens():
-    try:
-        with open(TOKENS_FILE, 'r') as f:
-            data = json.load(f)
-        now = time.time()
-        return {k: v for k, v in data.items() if now - v.get('_created', now) < 86400}
-    except:
-        return {}
-
-def _save_tokens(tokens):
-    with open(TOKENS_FILE, 'w') as f:
-        json.dump(tokens, f, indent=2)
-
-active_tokens = _load_tokens()  # Chargé au démarrage
 
 def generate_token():
     return secrets.token_hex(32)
@@ -63,7 +48,6 @@ def generate_token():
 def get_token_from_request():
     token = request.headers.get('X-Auth-Token', '') or ''
     if token and token not in active_tokens:
-        # Recharge depuis disque (redémarrage potentiel)
         fresh = _load_tokens()
         active_tokens.update(fresh)
     return token
@@ -115,22 +99,16 @@ def get_current_ip(proxies=None):
         return None
 
 def get_proxies_for_account(account, user_id="default"):
-    """
-    Retourne le proxy à utiliser pour ce compte.
-    Priorité : proxy du compte > proxy global de l'utilisateur
-    """
-    # Proxy spécifique au compte
     account_proxy = account.get('proxy_url', '').strip() if account.get('proxy_enabled') else ''
     if account_proxy:
         return {'http': account_proxy, 'https': account_proxy}
-    # Fallback : proxy global de l'utilisateur
     return get_proxies(user_id)
 
 # ============================================================
 # FICHIERS DE DONNÉES
 # ============================================================
 
-DATA_DIR = '/data'
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 TOKENS_FILE        = f"{DATA_DIR}/active_tokens.json"
@@ -145,7 +123,24 @@ AUTOMATION_FILE    = f"{DATA_DIR}/automation_config.json"
 SETTINGS_FILE      = f"{DATA_DIR}/panel_settings.json"
 PROXY_POOL_FILE    = f"{DATA_DIR}/proxy_pool.json"
 
-# --- SETTINGS ---
+# ── TOKENS ──
+
+def _load_tokens():
+    try:
+        with open(TOKENS_FILE, 'r') as f:
+            data = json.load(f)
+        now = time.time()
+        return {k: v for k, v in data.items() if now - v.get('_created', now) < 86400}
+    except:
+        return {}
+
+def _save_tokens(tokens):
+    with open(TOKENS_FILE, 'w') as f:
+        json.dump(tokens, f, indent=2)
+
+active_tokens = _load_tokens()
+
+# ── SETTINGS ──
 
 def load_settings(user_id="default"):
     try:
@@ -164,7 +159,19 @@ def save_settings(settings, user_id="default"):
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(all_data, f, indent=2)
 
-# --- TAGS ---
+# ── OPENAI KEY (depuis settings utilisateur) ──
+
+def get_openai_key(user_id="default"):
+    """Récupère la clé OpenAI depuis les settings utilisateur, sinon variable d'env."""
+    settings = load_settings(user_id)
+    key = settings.get('openai_api_key', '').strip()
+    if key:
+        return key
+    return os.environ.get('OPENAI_API_KEY', '')
+
+OPENAI_MODEL = "gpt-4.1-mini"
+
+# ── TAGS ──
 
 def load_tags(user_id="default"):
     try:
@@ -183,7 +190,7 @@ def save_tags(tags, user_id="default"):
     with open(TAGS_FILE, 'w', encoding='utf-8') as f:
         json.dump(all_data, f, indent=2, ensure_ascii=False)
 
-# --- STATS HISTORY ---
+# ── STATS HISTORY ──
 
 def load_stats_history(user_id="default"):
     try:
@@ -225,7 +232,7 @@ def record_daily_stats(user_id="default"):
         })
     save_stats_history(history, user_id)
 
-# --- AUTOMATION ---
+# ── AUTOMATION ──
 
 def load_automation(user_id="default"):
     try:
@@ -244,7 +251,7 @@ def save_automation(tasks, user_id="default"):
     with open(AUTOMATION_FILE, 'w') as f:
         json.dump(all_data, f, indent=2)
 
-# --- AUTH HELPERS ---
+# ── AUTH HELPERS ──
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -409,15 +416,14 @@ def build_headers(account, include_content_type=False):
     headers = {
         'x-auth-token': account['token'],
         'accept': 'application/json',
-        'user-agent': f"Tinder/{account.get('tinder_version','17.7.0')} (iPhone; iOS {account.get('ios_version','18,4,3')}; Scale/2.00)",
-        'tinder-version': account.get('tinder_version', '17.7.0'),
+        'user-agent': f"Tinder/{account.get('tinder_version','17.9.1')} (iPhone; iOS {account.get('ios_version','18,4,3')}; Scale/2.00)",
+        'tinder-version': account.get('tinder_version', '17.9.1'),
         'app-version': account.get('app_version', '6630'),
         'platform': 'ios',
         'accept-language': 'fr-FR,fr;q=0.9',
         'accept-encoding': 'gzip, deflate, br',
         'x-supported-image-formats': 'webp, jpeg',
         'x-device-ram': '1',
-        'persistent-device-id': account['persistent_device_id'],
         'app-session-id': session['app_session_id'],
         'user-session-id': session['user_session_id'],
         'x-hubble-entity-id': str(uuid.uuid4()),
@@ -425,12 +431,20 @@ def build_headers(account, include_content_type=False):
         'app-session-time-elapsed': str(app_session_time),
         'user-session-time-elapsed': str(user_session_time),
     }
+
+    pdid = account.get('persistent_device_id', '').strip()
+    if pdid:
+        headers['persistent-device-id'] = pdid
+
+    did = account.get('device_id', '').strip()
+    if did:
+        headers['device-id'] = did
+
     if include_content_type:
         headers['content-type'] = 'application/json'
     return headers
 
 def make_request(method, url, headers, proxies=None, json_data=None, data=None, timeout=15):
-    # Toujours essayer curl_cffi en premier si disponible
     if CURL_CFFI_AVAILABLE:
         try:
             if method == 'GET':
@@ -446,11 +460,9 @@ def make_request(method, url, headers, proxies=None, json_data=None, data=None, 
                 )
         except Exception as e:
             print(f"[curl_cffi] {method} {url} failed: {e}")
-            # Si curl_cffi échoue avec un proxy, ne pas retry sans proxy
             if proxies:
                 raise Exception(f"Proxy injoignable: {e}")
 
-    # Fallback requests standard — seulement sans proxy SOCKS5
     if proxies and any('socks' in str(v).lower() for v in proxies.values()):
         raise Exception("SOCKS5 proxy requires curl_cffi — install it properly")
 
@@ -627,7 +639,6 @@ def tinder_get_messages(account, match_id, proxies=None):
 def tinder_update_bio(account, bio, proxies=None):
     headers = build_headers(account, include_content_type=True)
     try:
-        # Forcer requests standard avec PySocks pour SOCKS5
         import requests as req
         resp = req.post(
             'https://api.gotinder.com/v2/profile/user',
@@ -645,13 +656,10 @@ def tinder_update_bio(account, bio, proxies=None):
         return {'success': False, 'error': str(e)}
 
 # ============================================================
-# IA
+# IA — clé OpenAI depuis settings + support langue
 # ============================================================
 
-OPENAI_API_KEY = "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"
-OPENAI_MODEL   = "gpt-4.1-mini"
-
-PERSONA = """
+PERSONA_FR = """
 Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
 
 ═══ PERSONNALITÉ ═══
@@ -680,7 +688,7 @@ Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
 - Méfiance / "t'es fake" / "tu cherches des abonnés" → DÉSAMORCE avec humour. JAMAIS confirmer. JAMAIS mentionner lntsa dans ce cas.
 - Insulte / message vulgaire → réponds avec humour léger ou ignore, reste chill.
 - Media (gif, image) → ne commente pas le contenu que tu ne vois pas. Relance sur autre chose.
-- Langue anglaise détectée → réponds en anglais avec le même ton décontracté.
+- Langue anglaise détectée → reste en français sauf instruction contraire.
 
 ═══ LOCALISATION ═══
 - JAMAIS d'adresse, ville, bar ou lieu inventé.
@@ -692,15 +700,55 @@ Tu es Sarah, 19 ans, étudiante en communication, sur Tinder.
 - Quand il propose de partir ailleurs → lntsa DIRECTEMENT, pas "lntsa ou snap ?".
 """
 
+PERSONA_EN = """
+You are Sarah, 19 years old, communications student, on Tinder.
 
-def _call_openai(prompt, max_tokens=100):
-    if not OPENAI_API_KEY or OPENAI_API_KEY == "REMPLACE_PAR_TA_CLE_OPENAI":
-        print("⚠️  Clé OpenAI non configurée")
+═══ PERSONALITY ═══
+- Laid-back but approachable. The other person needs to make some effort.
+- Playful, natural, spontaneous. Never cold, never too eager.
+- Chill, casual tone. Not formal, not professional.
+
+═══ WRITING RULES — MANDATORY ═══
+- NO capital letter at the start of sentences. NO period at the end. SMS style.
+- Words to use: lol, like, idk, lowkey, kinda, omg, ngl, fr, tbh.
+- Natural English. Short replies: 6-20 words in general.
+- Emojis: max 1 every 3-4 messages, at the end only.
+
+═══ CONVERSATION ═══
+- Read the FULL history. Reply in a COHERENT way to what was just said.
+- Max 2 questions in a row, then alternate remarks/statements.
+- NEVER end with a closed answer. ALWAYS end with a question or hook.
+- "doing good" alone = FORBIDDEN. Always [response] + question.
+
+═══ FOLLOW-UP ═══
+- If they already answered (fine, good, yeah) → DO NOT ask "and you?" again. PIVOT.
+- "listen" / "anyway" = they're about to say something → invite them to continue.
+
+═══ SPECIAL CASES ═══
+- Suspicion / "you're fake" / "you're fishing for followers" → deflect with humor. NEVER confirm. NEVER mention lntsa in that case.
+- Insult / vulgar message → reply with light humor or ignore, stay chill.
+- Media (gif, image) → don't comment on content you can't see. Pivot to something else.
+
+═══ LOCATION ═══
+- NEVER give an address, city, bar or invented place.
+- Deflect with humor: "i'm not too far", "a little mystery never hurt", "you want my address too?"
+
+═══ LNTSA - Goal ═══
+- Write exactly "lntsa" (L-n-t-s-a). NOT "insta", NOT "lnsta". Username WITHOUT @.
+- Snap/WhatsApp/number → ALWAYS refuse, suggest lntsa ONLY.
+- When they suggest moving elsewhere → lntsa DIRECTLY, not "lntsa or snap?".
+"""
+
+def _call_openai(prompt, max_tokens=100, user_id="default"):
+    """Appel OpenAI avec la clé configurée dans les settings de l'utilisateur."""
+    api_key = get_openai_key(user_id)
+    if not api_key:
+        print("⚠️  Clé OpenAI non configurée — configure-la dans Paramètres IA")
         return None
     try:
         resp = requests.post(
             "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={"model": OPENAI_MODEL, "messages": [{"role": "user", "content": prompt}],
                   "temperature": 0.9, "max_tokens": max_tokens},
             timeout=30
@@ -724,26 +772,48 @@ def _call_openai(prompt, max_tokens=100):
         return None
 
 
-def generate_ai_reply(conversation_history, match_name, match_bio, username, social_network):
+def generate_ai_reply(conversation_history, match_name, match_bio, username, social_network, language="fr", user_id="default"):
+    """
+    Génère une réponse IA.
+    language: "fr" pour français, "en" pour anglais
+    user_id: pour récupérer la clé OpenAI de l'utilisateur
+    """
+    # Sélection du persona selon la langue
+    PERSONA = PERSONA_EN if language == "en" else PERSONA_FR
+
     our_messages   = [m for m in conversation_history if m['sender'] == 'NOUS']
     their_messages = [m for m in conversation_history if m['sender'] != 'NOUS']
 
     if not their_messages:
-        opener_prompt = f"""{PERSONA}
+        if language == "en":
+            opener_prompt = f"""{PERSONA}
+This is a brand new match, no messages exchanged yet.
+Their name: {match_name}
+{"Their bio: " + match_bio if match_bio else "No bio."}
+Send a short, natural opening message.
+NEVER "hey how are you?". Something playful or original.
+Max 10 words, no quotes, no period at the end."""
+        else:
+            opener_prompt = f"""{PERSONA}
 C'est un tout nouveau match, aucun message échangé.
 Son nom: {match_name}
 {"Sa bio: " + match_bio if match_bio else "Pas de bio."}
 Envoie un premier message d'accroche court et naturel.
 JAMAIS "coucou ça va ?". Quelque chose de taquin ou original.
 Max 10 mots, pas de guillemets, pas de point final."""
-        return _call_openai(opener_prompt, max_tokens=60)
+        return _call_openai(opener_prompt, max_tokens=60, user_id=user_id)
 
     already_redirected = False
     soft_hint_given    = False
-    soft_hint_markers = ['jamais sur tinder', 'jamais ici', "j'me perds", 'notifs',
+    soft_hint_markers_fr = ['jamais sur tinder', 'jamais ici', "j'me perds", 'notifs',
                           'tinder pour', 'ici pour', 'jamais là', "pas trop l'habitude",
                           'parler bcp sur tinder', "pas trop présente", "j'check pas",
                           "longues discu sur tinder", "longues discu ici"]
+    soft_hint_markers_en = ["never on tinder", "never here", "don't check", "notifications",
+                            "not really on here", "barely on tinder", "rarely here",
+                            "tinder for", "hard to reach here"]
+    soft_hint_markers = soft_hint_markers_en if language == "en" else soft_hint_markers_fr
+
     if username:
         for msg in our_messages:
             ml = msg['text'].lower()
@@ -757,9 +827,13 @@ Max 10 mots, pas de guillemets, pas de point final."""
         return "__CTA_SENT__"
 
     formatted = "\n".join(
-        f"TOI (Sarah): {m['text']}" if m['sender'] == 'NOUS' else f"LUI ({m['sender']}): {m['text']}"
+        f"YOU (Sarah): {m['text']}" if language == "en" and m['sender'] == 'NOUS' else
+        f"TOI (Sarah): {m['text']}" if m['sender'] == 'NOUS' else
+        f"THEM ({m['sender']}): {m['text']}" if language == "en" else
+        f"LUI ({m['sender']}): {m['text']}"
         for m in conversation_history[-10:]
     )
+
     total_exchanges = min(len(our_messages), len(their_messages))
     last_their_msg  = their_messages[-1]['text']
     lml             = last_their_msg.lower()
@@ -767,10 +841,20 @@ Max 10 mots, pas de guillemets, pas de point final."""
     he_proposes_insta  = 'insta' in lml or 'instagram' in lml
     he_proposes_snap   = 'snap' in lml or 'snapchat' in lml
     he_proposes_social = he_proposes_insta or he_proposes_snap or any(
-        w in lml for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'appel', 'tel'])
+        w in lml for w in ['whatsapp', 'telegram', 'numero', 'numéro', 'number', 'appel', 'call', 'tel'])
 
     def detect_pseudo_given(msg_text, history):
-        detection_prompt = f"""Analyse ce message dans le contexte de la conversation.
+        if language == "en":
+            detection_prompt = f"""Analyze this message in the context of the conversation.
+Recent history:
+{chr(10).join(f"{'US' if m['sender'] == 'NOUS' else m['sender']}: {m['text']}" for m in history[-4:])}
+
+Message to analyze: "{msg_text}"
+
+Is this person giving their Instagram/social media username in this message?
+Reply ONLY with "yes" or "no"."""
+        else:
+            detection_prompt = f"""Analyse ce message dans le contexte de la conversation.
 Historique récent:
 {chr(10).join(f"{'NOUS' if m['sender'] == 'NOUS' else m['sender']}: {m['text']}" for m in history[-4:])}
 
@@ -778,59 +862,90 @@ Message à analyser: "{msg_text}"
 
 Est-ce que cette personne donne son pseudo Instagram/réseau social dans ce message ?
 Réponds UNIQUEMENT par "oui" ou "non"."""
-        result = _call_openai(detection_prompt, max_tokens=5)
+        result = _call_openai(detection_prompt, max_tokens=5, user_id=user_id)
+        if language == "en":
+            return result and result.strip().lower().startswith('yes')
         return result and result.strip().lower().startswith('oui')
 
     he_gave_his_pseudo = detect_pseudo_given(last_their_msg, conversation_history)
 
-    flirty_words      = ['croque','canon','magnifique','splendide','sexy','bombe',
+    flirty_words_fr   = ['croque','canon','magnifique','splendide','sexy','bombe',
                          'dingue','charmante','hot','🔥','😍','❤️']
-    compliment_phrases= ["t'es belle","tu es belle","t'es canon","trop belle",
-                         "trop mignonne","t'es mignonne","tu es mignonne","vraiment jolie","trop jolie"]
+    flirty_words_en   = ['gorgeous','stunning','beautiful','sexy','hot','cute','pretty',
+                         'attractive','amazing','babe','🔥','😍','❤️']
+    compliment_phrases_fr = ["t'es belle","tu es belle","t'es canon","trop belle",
+                              "trop mignonne","t'es mignonne","tu es mignonne","vraiment jolie","trop jolie"]
+    compliment_phrases_en = ["you're beautiful","you're gorgeous","you're cute","you're pretty",
+                              "you look amazing","so pretty","so cute","really pretty"]
+
+    flirty_words      = flirty_words_en if language == "en" else flirty_words_fr
+    compliment_phrases = compliment_phrases_en if language == "en" else compliment_phrases_fr
+
     is_flirty    = any(w in lml for w in flirty_words)
     is_compliment= is_flirty or any(p in lml for p in compliment_phrases)
     is_question  = '?' in last_their_msg
 
-    direct_words = ['envie','date','sortir','voir','rencontrer','rdv','ce soir',
-                    'week-end','weekend','dispo','disponible','on se voit','verre','resto']
+    direct_words_fr = ['envie','date','sortir','voir','rencontrer','rdv','ce soir',
+                       'week-end','weekend','dispo','disponible','on se voit','verre','resto']
+    direct_words_en = ['date','hang out','meet up','tonight','weekend','available',
+                       'coffee','drinks','dinner','chill','come over']
+    direct_words = direct_words_en if language == "en" else direct_words_fr
     is_direct    = any(w in lml for w in direct_words)
 
-    skeptical_words = ['fake','bot','vraie','réelle','arnaque','followers',
-                       'follow','abonnés','promo','pub','gratter']
+    skeptical_words_fr = ['fake','bot','vraie','réelle','arnaque','followers',
+                          'follow','abonnés','promo','pub','gratter']
+    skeptical_words_en = ['fake','bot','real','scam','followers','follow',
+                          'promotion','promo','advertising','ad','fishing']
+    skeptical_words = skeptical_words_en if language == "en" else skeptical_words_fr
     is_skeptical = any(w in lml for w in skeptical_words)
 
-    location_kw  = ["d'où","d ou",'où tu','ville','habite','vis où','viens','secteur',
-                    'coin','region',"t'habite",'tu habites','habite ou','quel bar',
-                    'quel parc','où ça',"c'est où",'ou ca','quel coin','dans quel','ou habites']
-    he_asked_location = any(kw in lml for kw in location_kw) or ('où' in lml and len(lml) < 35)
+    location_kw_fr  = ["d'où","d ou",'où tu','ville','habite','vis où','viens','secteur',
+                       'coin','region',"t'habite",'tu habites','habite ou','quel bar',
+                       'quel parc','où ça',"c'est où",'ou ca','quel coin','dans quel','ou habites']
+    location_kw_en  = ["where are you","where do you","where you from","what city","which city",
+                       "where you at","nearby","your area","whereabouts"]
+    location_kw = location_kw_en if language == "en" else location_kw_fr
+    he_asked_location = any(kw in lml for kw in location_kw) or (
+        ('where' in lml if language == "en" else 'où' in lml) and len(lml) < 35)
 
-    job_kw       = ['fais quoi','travail','boulot','métier','études','taff','bosses']
+    job_kw_fr = ['fais quoi','travail','boulot','métier','études','taff','bosses']
+    job_kw_en = ['what do you do','your job','work','study','college','major','career']
+    job_kw    = job_kw_en if language == "en" else job_kw_fr
     he_asked_job = any(kw in lml for kw in job_kw) and is_question
 
-    he_asked_et_toi = "et toi" in lml
-    he_asked_cava   = any(p in lml for p in ['ça va','ca va','comment tu vas',
-                                              'comment ça va','tu vas bien','comment vas-tu'])
-    short_positive  = (len(last_their_msg.split()) <= 4 and
-                       any(w in lml for w in ['tranquille','ça va','ca va','ouais','oui ','bien','nickel']))
+    he_asked_et_toi  = ("and you" in lml if language == "en" else "et toi" in lml)
+    cava_phrases_fr  = ['ça va','ca va','comment tu vas','comment ça va','tu vas bien','comment vas-tu']
+    cava_phrases_en  = ['how are you','how r u','how are u','you okay','doing well','how you doing']
+    he_asked_cava    = any(p in lml for p in (cava_phrases_en if language == "en" else cava_phrases_fr))
 
-    confusion_phrases = ['comment ça','comment ca','hein ?','hein ','je comprends pas',
-                         'comprend pas',"j'ai pas compris",'compris quoi']
-    he_is_confused  = (len(last_their_msg) < 40 and
-                       any(p in lml for p in confusion_phrases) and
-                       not any(q in lml for q in ['de quoi','quoi comme','quoi tu','quoi elle']))
+    positive_words_fr = ['tranquille','ça va','ca va','ouais','oui ','bien','nickel']
+    positive_words_en = ['fine','good','great','yeah','yep','cool','nice','alright']
+    short_positive    = (len(last_their_msg.split()) <= 4 and
+                         any(w in lml for w in (positive_words_en if language == "en" else positive_words_fr)))
+
+    confusion_phrases_fr = ['comment ça','comment ca','hein ?','hein ','je comprends pas',
+                            'comprend pas',"j'ai pas compris",'compris quoi']
+    confusion_phrases_en = ['what?','huh?','i don\'t get it','what do you mean',
+                            'not sure i follow','confused','what lol']
+    he_is_confused    = (len(last_their_msg) < 40 and
+                         any(p in lml for p in (confusion_phrases_en if language == "en" else confusion_phrases_fr)))
 
     q_already_answered = False
     if is_question:
-        q_words = ['fais quoi','tu fais','travail','bosses','étudies','études','comm','habite','où']
+        q_words_fr = ['fais quoi','tu fais','travail','bosses','étudies','études','comm','habite','où']
+        q_words_en = ['what do you do','your job','study','where','work','major']
+        q_words    = q_words_en if language == "en" else q_words_fr
         if any(q in lml for q in q_words):
             for msg in our_messages:
                 ml2 = msg['text'].lower()
-                if (('comm' in ml2 or 'fac' in ml2 or 'étudiante' in ml2) and
-                        any(q in lml for q in ['fais quoi','tu fais','travail','bosses'])):
-                    q_already_answered = True; break
-                if (('paris' in ml2 or 'lyon' in ml2 or 'habite' in ml2) and
-                        any(q in lml for q in ['habite','où','ville'])):
-                    q_already_answered = True; break
+                if language == "en":
+                    if (('comm' in ml2 or 'college' in ml2 or 'student' in ml2) and
+                            any(q in lml for q in ['what do you do','work','study'])):
+                        q_already_answered = True; break
+                else:
+                    if (('comm' in ml2 or 'fac' in ml2 or 'étudiante' in ml2) and
+                            any(q in lml for q in ['fais quoi','tu fais','travail','bosses'])):
+                        q_already_answered = True; break
 
     if total_exchanges >= 12:
         full_redirect_prob, soft_hint_prob = 1.0, 0.0
@@ -854,149 +969,255 @@ Réponds UNIQUEMENT par "oui" ou "non"."""
 
     p = PERSONA
 
-    greeting_words   = ['salut','hello','hey','coucou','bonjour','cc','slt','hi','yo','wesh']
+    greeting_words_fr = ['salut','hello','hey','coucou','bonjour','cc','slt','hi','yo','wesh']
+    greeting_words_en = ['hey','hi','hello','sup','yo','heyy','heyyy']
+    greeting_words    = greeting_words_en if language == "en" else greeting_words_fr
     is_simple_greeting = (any(lml.startswith(w) or lml == w for w in greeting_words) and
                           len(last_their_msg.split()) <= 5 and
                           total_exchanges == 0 and not (is_compliment or is_flirty))
 
-    if short_positive and not he_asked_cava:
-        prompt = f"""{p}
+    # ── Construction du prompt selon la langue ──
+    if language == "en":
+        if short_positive and not he_asked_cava:
+            prompt = f"""{p}
+{match_name} gave a short reply: "{last_their_msg}"
+History:\n{formatted}
+They ALREADY replied. DO NOT ask "and you?" again. PIVOT to something else.
+6-12 words, no quotes."""
+        elif he_asked_cava:
+            prompt = f"""{p}
+{match_name} is asking how you're doing: "{last_their_msg}"
+History:\n{formatted}
+Reply THEN follow up. NEVER just "doing good thanks" alone.
+6-15 words, 1 emoji max, no quotes."""
+        elif is_simple_greeting:
+            prompt = f"""{p}
+{match_name} said hi: "{last_their_msg}"
+Casual but accessible. Short.
+4-8 words max, no quotes."""
+        elif he_gave_his_pseudo:
+            prompt = f"""{p}
+{match_name} just gave their username in response to your request.
+History:\n{formatted}
+Reply confirming you'll add them AND give YOUR username {username} on lntsa.
+MANDATORY: mention "lntsa" AND "{username}" in the message.
+12-18 words, NO quotes."""
+        elif he_proposes_insta:
+            prompt = f"""{p}
+{match_name} is bringing up Instagram or giving their username. PERFECT!
+History:\n{formatted}
+Reply by giving YOUR username {username} directly.
+MANDATORY: write "{username}" AND "lntsa" in the message.
+8-15 words, NO quotes."""
+        elif he_proposes_snap:
+            prompt = f"""{p}
+{match_name} is asking for your snap: "{last_their_msg}"
+History:\n{formatted}
+REFUSE snap. Suggest lntsa: "you on lntsa? mine's {username}".
+12-25 words, write "lntsa", no quotes."""
+        elif he_proposes_social:
+            prompt = f"""{p}
+{match_name} is suggesting WhatsApp/phone: "{last_their_msg}"
+History:\n{formatted}
+REFUSE. Suggest lntsa ONLY: "you on lntsa? mine's {username}".
+15-25 words, write "lntsa", no quotes."""
+        elif is_skeptical:
+            prompt = f"""{p}
+{match_name} seems suspicious: "{last_their_msg}"
+History:\n{formatted}
+Reassure with humor. Do NOT mention lntsa.
+15-25 words, no quotes."""
+        elif is_direct and total_exchanges >= 8:
+            prompt = f"""{p}
+{match_name} is suggesting a date: "{last_their_msg}"
+History:\n{formatted}
+Say YES, explain it's easier to organize on lntsa ({username}).
+22-38 words, write "lntsa", no quotes."""
+        elif is_compliment or is_flirty:
+            prompt = f"""{p}
+{match_name} is complimenting you: "{last_their_msg}"
+History:\n{formatted}
+React to the compliment then ASK something back.
+8-18 words, 1 emoji max, no quotes."""
+        elif he_asked_location:
+            prompt = f"""{p}
+{match_name} is asking where you are: "{last_their_msg}"
+History:\n{formatted}
+NEVER give a location. Deflect with humor.
+10-20 words, no quotes."""
+        elif he_asked_job:
+            prompt = f"""{p}
+{match_name} is asking about your job: "{last_their_msg}"
+History:\n{formatted}
+Reply (communications student) and turn the question back.
+10-18 words, no quotes."""
+        elif he_asked_et_toi:
+            prompt = f"""{p}
+{match_name} says "and you?": "{last_their_msg}"
+History:\n{formatted}
+ANSWER the question then FOLLOW UP. End with a question.
+10-18 words, no quotes."""
+        elif he_is_confused:
+            prompt = f"""{p}
+{match_name} seems confused: "{last_their_msg}"
+History:\n{formatted}
+Rephrase or invite them to continue.
+8-15 words, no quotes."""
+        elif q_already_answered:
+            prompt = f"""{p}
+{match_name} is re-asking something already answered: "{last_their_msg}"
+History:\n{formatted}
+Remind briefly and PIVOT.
+10-18 words, no quotes."""
+        elif should_soft_hint:
+            prompt = f"""{p}
+Conversation with {match_name}. Plant the seed (without mentioning lntsa yet).
+Their message: "{last_their_msg}"
+History:\n{formatted}
+React THEN slip in "btw"/"anyway" + soft hint about tinder/notifications.
+FORBIDDEN: lntsa, insta, username. 15-25 words."""
+        elif should_redirect:
+            prompt = f"""{p}
+Conversation with {match_name}. Seed planted, now suggest lntsa.
+Their message: "{last_their_msg}"
+History:\n{formatted}
+[react to message] + "you on lntsa? mine's {username}".
+20-35 words, write "lntsa", no quotes."""
+        else:
+            prompt = f"""{p}
+History:\n{formatted}
+They say: "{last_their_msg}"
+Reply CASUAL, NATURAL. ALWAYS end with a question.
+6-15 words, no quotes, 1 emoji max or none."""
+
+        if len(their_messages) == 1:
+            prompt += "\n\n⚠️ FIRST MESSAGE: MUST end with an open question."
+
+    else:
+        # ── Prompts en français (identiques à l'original) ──
+        if short_positive and not he_asked_cava:
+            prompt = f"""{p}
 {match_name} a répondu court : "{last_their_msg}"
 Historique:\n{formatted}
 Il a DÉJÀ répondu. NE REDEMANDE PAS "et toi ?". PIVOTE vers autre chose.
 6-12 mots, pas de guillemets."""
-
-    elif he_asked_cava:
-        prompt = f"""{p}
+        elif he_asked_cava:
+            prompt = f"""{p}
 {match_name} demande comment tu vas: "{last_their_msg}"
 Historique:\n{formatted}
 Réponds PUIS relance. JAMAIS "ça va bien merci" seul.
 6-15 mots, 1 emoji max, pas de guillemets."""
-    elif is_simple_greeting:
-        prompt = f"""{p}
+        elif is_simple_greeting:
+            prompt = f"""{p}
 {match_name} te dit bonjour: "{last_their_msg}"
 Style détaché mais accessible. Court.
 4-8 mots max, pas de guillemets."""
-
-    elif he_gave_his_pseudo:
-        prompt = f"""{p}
+        elif he_gave_his_pseudo:
+            prompt = f"""{p}
 {match_name} vient de donner son pseudo en réponse à ta demande.
 Historique:\n{formatted}
 Réponds en confirmant que tu vas l'ajouter ET donne TON pseudo {username} sur lntsa.
 OBLIGATOIRE : mentionner "lntsa" ET "{username}" dans le message.
 12-18 mots, PAS de guillemets."""
-
-    elif he_proposes_insta:
-        prompt = f"""{p}
+        elif he_proposes_insta:
+            prompt = f"""{p}
 {match_name} te propose Instagram ou donne son pseudo. PARFAIT !
 Historique:\n{formatted}
 Réponds en donnant TON pseudo {username} directement.
 OBLIGATOIRE : écrire "{username}" ET "lntsa" dans le message.
 8-15 mots, PAS de guillemets."""
-    elif he_proposes_snap:
-        prompt = f"""{p}
+        elif he_proposes_snap:
+            prompt = f"""{p}
 {match_name} demande ton snap: "{last_their_msg}"
 Historique:\n{formatted}
 REFUSE snap. Propose lntsa : "t'as lntsa ? moi c'est {username}".
 12-25 mots, écris "lntsa", pas de guillemets."""
-
-    elif he_proposes_social:
-        prompt = f"""{p}
+        elif he_proposes_social:
+            prompt = f"""{p}
 {match_name} propose WhatsApp/numéro: "{last_their_msg}"
 Historique:\n{formatted}
 REFUSE. Propose lntsa UNIQUEMENT : "t'as lntsa ? moi c'est {username}".
 15-25 mots, écris "lntsa", pas de guillemets."""
-
-    elif is_skeptical:
-        prompt = f"""{p}
+        elif is_skeptical:
+            prompt = f"""{p}
 {match_name} semble méfiant: "{last_their_msg}"
 Historique:\n{formatted}
 Rassure avec humour. Ne mentionne PAS lntsa.
 15-25 mots, pas de guillemets."""
-
-    elif is_direct and total_exchanges >= 8:
-        prompt = f"""{p}
+        elif is_direct and total_exchanges >= 8:
+            prompt = f"""{p}
 {match_name} propose un date: "{last_their_msg}"
 Historique:\n{formatted}
 Dis OUI, explique qu'il faut s'organiser ailleurs, propose lntsa ({username}).
 22-38 mots, écris "lntsa", pas de guillemets."""
-
-    elif is_compliment or is_flirty:
-        prompt = f"""{p}
+        elif is_compliment or is_flirty:
+            prompt = f"""{p}
 {match_name} te fait un compliment: "{last_their_msg}"
 Historique:\n{formatted}
 Réagis au compliment puis RELANCE avec une question.
 8-18 mots, 1 emoji max, pas de guillemets."""
-
-    elif he_asked_location:
-        prompt = f"""{p}
+        elif he_asked_location:
+            prompt = f"""{p}
 {match_name} demande ta localisation: "{last_their_msg}"
 Historique:\n{formatted}
 NE DONNE JAMAIS de lieu. Esquive avec humour.
 10-20 mots, pas de guillemets."""
-
-    elif he_asked_job:
-        prompt = f"""{p}
+        elif he_asked_job:
+            prompt = f"""{p}
 {match_name} demande ton job: "{last_their_msg}"
 Historique:\n{formatted}
 Réponds (étudiante en comm) et retourne la question.
 10-18 mots, pas de guillemets."""
-
-    elif he_asked_et_toi:
-        prompt = f"""{p}
+        elif he_asked_et_toi:
+            prompt = f"""{p}
 {match_name} dit "et toi ?": "{last_their_msg}"
 Historique:\n{formatted}
 RÉPONDS à la question puis RELANCE. Finis par une question.
 10-18 mots, pas de guillemets."""
-
-    elif he_is_confused:
-        prompt = f"""{p}
+        elif he_is_confused:
+            prompt = f"""{p}
 {match_name} comprend pas: "{last_their_msg}"
 Historique:\n{formatted}
 Reformule ou invite-le à continuer.
 8-15 mots, pas de guillemets."""
-
-    elif q_already_answered:
-        prompt = f"""{p}
+        elif q_already_answered:
+            prompt = f"""{p}
 {match_name} repose une question déjà répondue: "{last_their_msg}"
 Historique:\n{formatted}
 Rappelle brièvement et PIVOTE.
 10-18 mots, pas de guillemets."""
-
-    elif should_soft_hint:
-        prompt = f"""{p}
+        elif should_soft_hint:
+            prompt = f"""{p}
 Conversation avec {match_name}. Plante la graine (sans mentionner lntsa).
 Son message: "{last_their_msg}"
 Historique:\n{formatted}
 Réagis PUIS glisse "par contre"/"sinon"/"au fait" + phrase douce sur tinder/notifs.
 INTERDIT: lntsa, insta, pseudo. 15-25 mots."""
-
-    elif should_redirect:
-        prompt = f"""{p}
+        elif should_redirect:
+            prompt = f"""{p}
 Conversation avec {match_name}. Graine plantée, propose maintenant lntsa.
 Son message: "{last_their_msg}"
 Historique:\n{formatted}
 [réagir au message] + "t'as lntsa ? moi c'est {username}".
 20-35 mots, écris "lntsa", pas de guillemets."""
-
-    else:
-        prompt = f"""{p}
+        else:
+            prompt = f"""{p}
 Historique:\n{formatted}
 Il dit: "{last_their_msg}"
 Réponds DÉCONTRACTÉ, NATUREL. Finis TOUJOURS par une question.
 6-15 mots, pas de guillemets, 1 emoji max ou pas."""
 
-    if len(their_messages) == 1:
-        prompt += "\n\n⚠️ PREMIER MESSAGE: finir OBLIGATOIREMENT par une question ouverte."
+        if len(their_messages) == 1:
+            prompt += "\n\n⚠️ PREMIER MESSAGE: finir OBLIGATOIREMENT par une question ouverte."
 
-    return _call_openai(prompt, max_tokens=100)
+    return _call_openai(prompt, max_tokens=100, user_id=user_id)
 
 
 # ============================================================
 # AUTOMATION SCHEDULER
 # ============================================================
 
-automation_jobs = {}
+automation_jobs    = {}
 automation_threads = {}
 
 def run_automation_task(task_id, task, user_id):
@@ -1010,10 +1231,11 @@ def run_automation_task(task_id, task, user_id):
             automation_jobs[task_id]['log'] = automation_jobs[task_id]['log'][-500:]
 
     interval_sec = int(task.get('interval_minutes', 30)) * 60
-    task_type = task.get('type', 'massdm')
-    parallel  = task.get('parallel', False)
+    task_type    = task.get('type', 'massdm')
+    parallel     = task.get('parallel', False)
+    language     = task.get('language', 'fr')
 
-    log(f"⚡ Tâche démarrée — {task_type} toutes les {task.get('interval_minutes')}min")
+    log(f"⚡ Tâche démarrée — {task_type} toutes les {task.get('interval_minutes')}min — langue: {language.upper()}")
 
     while automation_jobs.get(task_id, {}).get('status') == 'running':
         next_run = time.time() + interval_sec
@@ -1030,7 +1252,7 @@ def run_automation_task(task_id, task, user_id):
                 social_network = task.get('social_network', 'Instagram')
                 mode           = task_type
                 t = threading.Thread(target=run_mass_dm,
-                    args=(job_id, account_ids, username, social_network, mode, user_id), daemon=True)
+                    args=(job_id, account_ids, username, social_network, mode, user_id, language), daemon=True)
                 t.start()
                 while t.is_alive():
                     if automation_jobs.get(task_id, {}).get('status') != 'running': break
@@ -1112,11 +1334,9 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
             save_accounts(all_accs, user_id)
 
     def process_account(account):
-        # Proxy spécifique au compte ou proxy global
         proxies = get_proxies_for_account(account, user_id)
         proxy_label = f"[proxy: {account.get('proxy_url','global')[:30]}...]" if account.get('proxy_enabled') and account.get('proxy_url') else "[proxy: global]" if proxies else "[no proxy]"
         log(f"▶ Démarrage {account['name']} {proxy_label}")
-        # Vérification IP réelle
         real_ip = get_current_ip(proxies)
         if real_ip:
             log(f"  🌐 IP réelle : {real_ip} {'✅ proxy actif' if proxies else '⚠️ pas de proxy'}")
@@ -1224,7 +1444,7 @@ def run_auto_swipe(job_id, account_ids, swipe_count, like_pct, mode, user_id, pa
 
 dm_progress = {}
 
-def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
+def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id, language="fr"):
     accounts = load_accounts(user_id)
     accounts = [a for a in accounts if a['user_id'] in account_ids] if account_ids else accounts
 
@@ -1236,18 +1456,24 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
         'accounts': [], 'log': []
     }
 
-    fallback_messages = [
+    fallback_messages_fr = [
         "Coucou, ça va ?",
         "Hey ! Comment tu vas ?",
         "Salut 😊",
         "Cc ! Tu vas bien ?",
     ]
+    fallback_messages_en = [
+        "Hey, how's it going?",
+        "Hi! How are you?",
+        "Hey 😊",
+        "Hey! You good?",
+    ]
+    fallback_messages = fallback_messages_en if language == "en" else fallback_messages_fr
 
     def log(msg):
         dm_progress[job_id]['log'].append(msg)
 
     for account in accounts:
-        # Proxy spécifique au compte ou proxy global
         proxies = get_proxies_for_account(account, user_id)
         proxy_label = f"[proxy: {account.get('proxy_url','')[:25]}...]" if account.get('proxy_enabled') and account.get('proxy_url') else "[proxy: global]" if proxies else "[no proxy]"
         log(f"▶ Compte : {account['name']} {proxy_label}")
@@ -1322,8 +1548,12 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                 continue
 
             if mode == 'chatting':
-                log(f"  🤖 Génération IA en cours...")
-                msg_text = generate_ai_reply(conversation_history, match_name, match_bio, username, social_network)
+                log(f"  🤖 Génération IA en cours... (langue: {language.upper()})")
+                msg_text = generate_ai_reply(
+                    conversation_history, match_name, match_bio,
+                    username, social_network,
+                    language=language, user_id=user_id
+                )
                 if msg_text == "__CTA_SENT__":
                     skipped += 1
                     log(f"  ⏭ {match_name} — CTA déjà envoyé, on attend")
@@ -1332,14 +1562,21 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
                     log(f"  🤖 IA → \"{msg_text}\"")
                 else:
                     msg_text = random.choice(fallback_messages)
-                    log(f"  ⚠️ IA échouée → Fallback: \"{msg_text}\"")
+                    log(f"  ⚠️ IA échouée → clé OpenAI manquante ou erreur → Fallback: \"{msg_text}\"")
 
             elif mode == 'massdm':
-                msg_text = random.choice([
-                    f"Coucou, ton profil m'a fait sourire haha ! Je suis plus sur {social_network}, cherche {username} si tu veux qu'on parle 😊",
-                    f"Salut ! J'utilise plus trop cette appli... Je suis {username} sur {social_network} 🙈",
-                    f"Hey ! Par contre je réponds pas souvent ici, {username} sur {social_network} c'est mieux !",
-                ])
+                if language == "en":
+                    msg_text = random.choice([
+                        f"Hey, your profile made me smile haha! I'm not really on {social_network} anymore, look up {username} if you want to chat 😊",
+                        f"Hi! I don't use this app much... I'm {username} on {social_network} 🙈",
+                        f"Hey! I don't check here often, {username} on {social_network} is better!",
+                    ])
+                else:
+                    msg_text = random.choice([
+                        f"Coucou, ton profil m'a fait sourire haha ! Je suis plus sur {social_network}, cherche {username} si tu veux qu'on parle 😊",
+                        f"Salut ! J'utilise plus trop cette appli... Je suis {username} sur {social_network} 🙈",
+                        f"Hey ! Par contre je réponds pas souvent ici, {username} sur {social_network} c'est mieux !",
+                    ])
             else:
                 msg_text = random.choice(fallback_messages)
 
@@ -1376,10 +1613,8 @@ def run_mass_dm(job_id, account_ids, username, social_network, mode, user_id):
     dm_progress[job_id]['status'] = 'done'
 
 # ============================================================
-# ROUTES API
+# PROXY POOL
 # ============================================================
-
-
 
 def load_proxy_pool(user_id="default"):
     try:
@@ -1399,13 +1634,18 @@ def save_proxy_pool(pool, user_id="default"):
         json.dump(all_data, f, indent=2)
 
 def pop_proxy_from_pool(user_id="default"):
-    """Prend le premier proxy disponible et le retire du pool."""
     pool = load_proxy_pool(user_id)
     if not pool:
         return None
     proxy = pool.pop(0)
     save_proxy_pool(pool, user_id)
     return proxy
+
+# ============================================================
+# ROUTES API
+# ============================================================
+
+# ── PROXY POOL ──
 
 @app.route('/api/proxy-pool', methods=['GET'])
 @require_auth
@@ -1418,17 +1658,13 @@ def get_proxy_pool():
 def set_proxy_pool():
     data = request.json or {}
     raw_list = data.get('proxies', [])
-    # Nettoyer et formater chaque proxy
     cleaned = []
     for p in raw_list:
         p = p.strip()
-        if not p:
-            continue
+        if not p: continue
         if not (p.startswith('http') or p.startswith('socks')):
-            if '@' in p:
-                p = f'socks5://{p}'
-        if p:
-            cleaned.append(p)
+            if '@' in p: p = f'socks5://{p}'
+        if p: cleaned.append(p)
     save_proxy_pool(cleaned, current_user_id())
     return jsonify({'success': True, 'count': len(cleaned)})
 
@@ -1448,13 +1684,10 @@ def add_to_proxy_pool():
     pool = load_proxy_pool(current_user_id())
     for p in new_proxies:
         p = p.strip()
-        if not p:
-            continue
+        if not p: continue
         if not (p.startswith('http') or p.startswith('socks')):
-            if '@' in p:
-                p = f'socks5://{p}'
-        if p and p not in pool:
-            pool.append(p)
+            if '@' in p: p = f'socks5://{p}'
+        if p and p not in pool: pool.append(p)
     save_proxy_pool(pool, current_user_id())
     return jsonify({'success': True, 'count': len(pool)})
 
@@ -1463,8 +1696,6 @@ def add_to_proxy_pool():
 def clear_proxy_pool():
     save_proxy_pool([], current_user_id())
     return jsonify({'success': True})
-
-
 
 # ── AUTH ──
 
@@ -1480,12 +1711,11 @@ def login():
             active_tokens[token] = {'user_id': uid, 'username': u['username'], 'role': u['role'], '_created': time.time()}
             with _tokens_lock:
                 _save_tokens(active_tokens)
-
             return jsonify({'success': True, 'token': token, 'username': u['username'], 'role': u['role']})
     return jsonify({'success': False, 'error': 'Identifiants incorrects'}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
-def logout():
+def api_logout():
     token = get_token_from_request()
     if token in active_tokens:
         del active_tokens[token]
@@ -1522,16 +1752,35 @@ def change_password():
 @app.route('/api/settings', methods=['GET'])
 @require_auth
 def get_settings():
-    return jsonify({'success': True, 'settings': load_settings(current_user_id())})
+    settings = load_settings(current_user_id())
+    # Ne jamais retourner la clé complète au frontend, seulement si elle est définie
+    safe = {k: v for k, v in settings.items() if k != 'openai_api_key'}
+    safe['has_openai_key'] = bool(settings.get('openai_api_key', '').strip())
+    safe['openai_api_key_preview'] = (settings.get('openai_api_key', '')[:8] + '...' + settings.get('openai_api_key', '')[-4:]) if len(settings.get('openai_api_key', '')) > 12 else ''
+    safe['chatting_language'] = settings.get('chatting_language', 'fr')
+    safe['auto_delete_dead']  = settings.get('auto_delete_dead', False)
+    return jsonify({'success': True, 'settings': safe})
 
 @app.route('/api/settings', methods=['POST'])
 @require_auth
 def update_settings():
-    data = request.json or {}
+    data     = request.json or {}
     settings = load_settings(current_user_id())
-    settings.update(data)
+    # Mise à jour sélective
+    if 'auto_delete_dead' in data:
+        settings['auto_delete_dead'] = bool(data['auto_delete_dead'])
+    if 'chatting_language' in data:
+        lang = data['chatting_language']
+        if lang in ('fr', 'en'):
+            settings['chatting_language'] = lang
+    if 'openai_api_key' in data:
+        key = data['openai_api_key'].strip()
+        if key:
+            settings['openai_api_key'] = key
+        elif data.get('clear_openai_key'):
+            settings['openai_api_key'] = ''
     save_settings(settings, current_user_id())
-    return jsonify({'success': True, 'settings': settings})
+    return jsonify({'success': True})
 
 # ── ADMIN ──
 
@@ -1631,7 +1880,7 @@ def get_accounts():
         'user_id': a.get('user_id'),
         'name': a.get('name'),
         'has_refresh': bool(a.get('refresh_token')),
-        'tinder_version': a.get('tinder_version', '17.7.0'),
+        'tinder_version': a.get('tinder_version', '17.9.1'),
         'bio': a.get('bio', ''),
         'photo': a.get('photo', ''),
         'age': a.get('age', ''),
@@ -1641,7 +1890,6 @@ def get_accounts():
         'cached_match_count': a.get('cached_match_count'),
         'added_at': a.get('added_at', ''),
         '_alive': a.get('_alive'),
-        # Proxy par compte
         'proxy_enabled': a.get('proxy_enabled', False),
         'proxy_url': a.get('proxy_url', ''),
     } for a in accounts]
@@ -1655,11 +1903,9 @@ def add_account():
     if not all(k in data for k in required):
         return jsonify({'success': False, 'error': 'Champs requis: token, persistent_device_id, device_id'}), 400
 
-    # Proxy du compte (optionnel à l'ajout)
     account_proxy_url     = data.get('proxy_url', '').strip()
     account_proxy_enabled = bool(data.get('proxy_enabled', False)) and bool(account_proxy_url)
 
-    # On utilise le proxy du compte pour la vérification si disponible, sinon global
     if account_proxy_enabled and account_proxy_url:
         check_proxies = {'http': account_proxy_url, 'https': account_proxy_url}
     else:
@@ -1671,7 +1917,7 @@ def add_account():
         'device_id': data['device_id'],
         'user_id': 'temp_check',
         'ios_version': data.get('ios_version', '18,4,3'),
-        'tinder_version': data.get('tinder_version', '17.7.0'),
+        'tinder_version': data.get('tinder_version', '17.9.1'),
         'app_version': data.get('app_version', '6630'),
         'latitude': data.get('latitude', 48.8566),
         'longitude': data.get('longitude', 2.3522),
@@ -1691,7 +1937,6 @@ def add_account():
         'tags': data.get('tags', []),
         'added_at': time.strftime('%Y-%m-%d %H:%M:%S'),
         '_alive': True,
-        # Proxy par compte
         'proxy_enabled': account_proxy_enabled,
         'proxy_url': account_proxy_url,
     }
@@ -1731,7 +1976,6 @@ def update_account_tags(user_id):
 @app.route('/api/accounts/<user_id>/proxy', methods=['POST'])
 @require_auth
 def update_account_proxy(user_id):
-    """Met à jour le proxy d'un compte spécifique."""
     data      = request.json or {}
     proxy_url = data.get('proxy_url', '').strip()
     enabled   = bool(data.get('proxy_enabled', False)) and bool(proxy_url)
@@ -1746,31 +1990,26 @@ def update_account_proxy(user_id):
     save_accounts(accounts, current_user_id())
     return jsonify({'success': True, 'proxy_enabled': enabled, 'proxy_url': proxy_url})
 
-
 @app.route('/api/accounts/<user_id>/proxy/test', methods=['GET', 'POST'])
 @require_auth
 def test_account_proxy(user_id):
-    """Teste le proxy d'un compte spécifique — ou un proxy passé en body."""
     accounts = load_accounts(current_user_id())
     account  = next((a for a in accounts if a['user_id'] == user_id), None)
     if not account:
         return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
 
-    # Si on passe un proxy_url dans le body, on teste celui-là directement
-    data = request.json or {}
+    data     = request.json or {}
     test_url = data.get('proxy_url', '').strip()
-    
+
     if test_url:
         proxies = {'http': test_url, 'https': test_url}
         using_account_proxy = True
     else:
         proxies = get_proxies_for_account(account, current_user_id())
         using_account_proxy = account.get('proxy_enabled', False) and bool(account.get('proxy_url'))
-    
-    ip = get_current_ip(proxies)
-    return jsonify({'success': bool(ip), 'ip': ip,
-                    'using_account_proxy': using_account_proxy})
 
+    ip = get_current_ip(proxies)
+    return jsonify({'success': bool(ip), 'ip': ip, 'using_account_proxy': using_account_proxy})
 
 @app.route('/api/accounts/<user_id>/bio', methods=['POST'])
 @require_auth
@@ -1780,16 +2019,10 @@ def update_bio(user_id):
     account  = next((a for a in accounts if a['user_id'] == user_id), None)
     if not account:
         return jsonify({'success': False, 'error': 'Compte introuvable'}), 404
-    
+
     proxies = get_proxies_for_account(account, current_user_id())
-    print(f"[BIO DEBUG] account keys={list(account.keys())}")
-    print(f"[BIO DEBUG] user_id={account.get('user_id')}")
-    print(f"[BIO DEBUG] token present={bool(account.get('token'))}")
-    print(f"[BIO DEBUG] proxies={proxies}")
-    
-    result = tinder_update_bio(account, bio, proxies)
-    print(f"[BIO DEBUG] result={result}")
-    
+    result  = tinder_update_bio(account, bio, proxies)
+
     if result['success']:
         for a in accounts:
             if a['user_id'] == user_id:
@@ -1806,9 +2039,8 @@ def check_tokens():
     auto_delete = settings.get('auto_delete_dead', False)
 
     for account in accounts:
-        # Chaque compte utilise son propre proxy pour la vérification
-        proxies = get_proxies_for_account(account, current_user_id())
-        r              = tinder_check_token(account, proxies)
+        proxies           = get_proxies_for_account(account, current_user_id())
+        r                 = tinder_check_token(account, proxies)
         account['_alive'] = r['valid']
         results.append({'name': account['name'], 'user_id': account['user_id'], 'valid': r['valid']})
         if r['valid']:
@@ -1832,7 +2064,7 @@ def get_match_counts():
     result   = {}
     for account in accs:
         try:
-            proxies = get_proxies_for_account(account, user_id)
+            proxies   = get_proxies_for_account(account, user_id)
             tinder_init_session(account, proxies)
             matches_r = tinder_get_matches(account, 100, proxies)
             convs_r   = tinder_get_conversations(account, 100, proxies)
@@ -1845,8 +2077,8 @@ def get_match_counts():
                 for c in convs_r['conversations']:
                     mid = c.get('_id')
                     if mid: all_ids.add(mid)
-            result[account['user_id']]      = len(all_ids)
-            account['cached_match_count']   = len(all_ids)
+            result[account['user_id']]    = len(all_ids)
+            account['cached_match_count'] = len(all_ids)
         except Exception:
             result[account['user_id']] = account.get('cached_match_count', 0)
     save_accounts(accs, user_id)
@@ -1917,7 +2149,10 @@ def get_automation():
 @app.route('/api/automation', methods=['POST'])
 @require_auth
 def create_automation():
-    data = request.json or {}
+    data     = request.json or {}
+    language = data.get('language', 'fr')
+    if language not in ('fr', 'en'):
+        language = 'fr'
     task = {
         'id': str(uuid.uuid4())[:8],
         'name': data.get('name', 'Tâche auto'),
@@ -1929,6 +2164,7 @@ def create_automation():
         'swipe_count': int(data.get('swipe_count', 50)),
         'like_pct': int(data.get('like_pct', 80)),
         'parallel': bool(data.get('parallel', False)),
+        'language': language,
         'created_at': time.time(),
     }
     tasks = load_automation(current_user_id())
@@ -2011,10 +2247,15 @@ def start_dm():
     username       = data.get('username', '')
     social_network = data.get('social_network', 'Instagram')
     mode           = data.get('mode', 'massdm')
+    # Langue : priorité au paramètre du body, sinon settings utilisateur
+    language = data.get('language', '')
+    if language not in ('fr', 'en'):
+        settings = load_settings(current_user_id())
+        language = settings.get('chatting_language', 'fr')
     if not username:
         return jsonify({'success': False, 'error': 'Username requis'}), 400
     threading.Thread(target=run_mass_dm,
-        args=(job_id, account_ids, username, social_network, mode, current_user_id()),
+        args=(job_id, account_ids, username, social_network, mode, current_user_id(), language),
         daemon=True).start()
     return jsonify({'success': True, 'job_id': job_id})
 
@@ -2085,6 +2326,33 @@ def get_matches_list():
                 })
     return jsonify({'success': True, 'matches': all_matches})
 
+# ── TEST OPENAI KEY ──
+
+@app.route('/api/settings/test-openai', methods=['POST'])
+@require_auth
+def test_openai_key():
+    """Teste la clé OpenAI configurée."""
+    api_key = get_openai_key(current_user_id())
+    if not api_key:
+        return jsonify({'success': False, 'error': 'Aucune clé OpenAI configurée'})
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": OPENAI_MODEL,
+                  "messages": [{"role": "user", "content": "Say 'ok' in one word."}],
+                  "max_tokens": 5},
+            timeout=15
+        )
+        if resp.status_code == 200:
+            return jsonify({'success': True, 'message': '✅ Clé valide — OpenAI répond correctement'})
+        elif resp.status_code == 401:
+            return jsonify({'success': False, 'error': '❌ Clé invalide ou expirée'})
+        else:
+            return jsonify({'success': False, 'error': f'❌ Erreur OpenAI: HTTP {resp.status_code}'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'❌ Erreur réseau: {str(e)}'})
+
 # ============================================================
 # RESET AUTO MINUIT
 # ============================================================
@@ -2115,7 +2383,7 @@ def check_and_reset_stats():
     else:
         print(f"✅ Stats du jour déjà chargées ({today})")
 
-
+# ── SERVE FRONTEND ──
 
 from flask import send_from_directory
 
@@ -2123,8 +2391,6 @@ from flask import send_from_directory
 @app.route('/<path:path>')
 def serve_frontend(path):
     return send_from_directory('templates', 'index.html')
-
-
 
 # ============================================================
 # LANCEMENT
@@ -2134,5 +2400,6 @@ ensure_admin_exists()
 check_and_reset_stats()
 
 if __name__ == '__main__':
-    print("🚀 Backend panel démarré sur http://localhost:5002")
+    print("🚀 Backend panel démarré sur http://localhost:8080")
     app.run(host='0.0.0.0', port=8080, debug=False)
+# EOF
